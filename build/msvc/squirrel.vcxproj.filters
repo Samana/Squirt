@@ -1,0 +1,140 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Include">
+      <UniqueIdentifier>{60dac951-e770-4c5e-a837-490a0057509d}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Src">
+      <UniqueIdentifier>{6ea51fe7-c170-4dc9-954b-8114be00da73}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\SQUIRREL3\include\sqstdaux.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\include\sqstdblob.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\include\sqstdio.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\include\sqstdmath.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\include\sqstdstring.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\include\sqstdsystem.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\include\squirrel.h">
+      <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sq_llvm.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqarray.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqclass.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqclosure.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqcompiler.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqfuncproto.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqfuncstate.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqlexer.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqobject.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqopcodes.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqpcheader.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqreflection.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqstate.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqstaticanalyser.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqstring.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqtable.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\squserdata.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\squtils.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\sqvm.h">
+      <Filter>Src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sq_llvm.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqapi.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqbaselib.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqclass.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqcompiler.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqdebug.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqfuncstate.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqlexer.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqmem.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqobject.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqreflection.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqstate.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqstaticanalyser.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqtable.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\SQUIRREL3\squirrel\sqvm.cpp">
+      <Filter>Src</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+﻿<Window x:Class="SqWrite.SqDocumentWnd"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SqDocumentWnd" Height="300" Width="300" WindowStyle="None">
+    <Grid>
+    </Grid>
+</Window>

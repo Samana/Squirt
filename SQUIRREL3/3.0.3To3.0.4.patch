@@ -1,0 +1,117 @@
+Index: HISTORY
+===================================================================
+--- HISTORY	(revision 1)
++++ HISTORY	(working copy)
+@@ -1,3 +1,11 @@
++***version 3.0.4 stable***
++-sq_deleteslot slot now pops the key in case of failure
++-fixed bug when _get metamethod throws null
++-fixed a bug in rstrip
++-added some error handling
++-minor bugfixes
++
++***2012-06-19		   ***
+ ***version 3.0.3 stable***
+ -improved error messages for _cmp(when a non integer value is returned) (thx Yexo)
+ -added class.newmember() built in method (thx Nam)
+Index: include/squirrel.h
+===================================================================
+--- include/squirrel.h	(revision 1)
++++ include/squirrel.h	(working copy)
+@@ -181,10 +181,10 @@
+ #define _PRINT_INT_FMT _SC("%d")
+ #endif
+ 
+-#define SQUIRREL_VERSION	_SC("Squirrel 3.0.3 stable")
++#define SQUIRREL_VERSION	_SC("Squirrel 3.0.4 stable")
+ #define SQUIRREL_COPYRIGHT	_SC("Copyright (C) 2003-2012 Alberto Demichelis")
+ #define SQUIRREL_AUTHOR		_SC("Alberto Demichelis")
+-#define SQUIRREL_VERSION_NUMBER	303
++#define SQUIRREL_VERSION_NUMBER	304
+ 
+ #define SQ_VMSTATE_IDLE			0
+ #define SQ_VMSTATE_RUNNING		1
+Index: sqstdlib/sqstdrex.cpp
+===================================================================
+--- sqstdlib/sqstdrex.cpp	(revision 1)
++++ sqstdlib/sqstdrex.cpp	(working copy)
+@@ -263,7 +263,6 @@
+ 	}
+ 
+ 
+-	SQInteger op;
+ 	SQBool isgreedy = SQFalse;
+ 	unsigned short p0 = 0, p1 = 0;
+ 	switch(*exp->_p){
+@@ -297,7 +296,6 @@
+ 	}
+ 	if(isgreedy) {
+ 		SQInteger nnode = sqstd_rex_newnode(exp,OP_GREEDY);
+-		op = OP_GREEDY;
+ 		exp->_nodes[nnode].left = ret;
+ 		exp->_nodes[nnode].right = ((p0)<<16)|p1;
+ 		ret = nnode;
+Index: sqstdlib/sqstdstring.cpp
+===================================================================
+--- sqstdlib/sqstdstring.cpp	(revision 1)
++++ sqstdlib/sqstdstring.cpp	(working copy)
+@@ -172,8 +172,8 @@
+ 		return;
+ 	}
+ 	const SQChar *t = &str[len-1];
+-	while(t != str && scisspace(*t)) { t--; }
+-	*end = t+1;
++	while(t >= str && scisspace(*t)) { t--; }
++	*end = t + 1;
+ }
+ 
+ static SQInteger _string_strip(HSQUIRRELVM v)
+Index: squirrel/sqapi.cpp
+===================================================================
+--- squirrel/sqapi.cpp	(revision 1)
++++ squirrel/sqapi.cpp	(working copy)
+@@ -808,6 +808,7 @@
+ 	if(type(key) == OT_NULL) return sq_throwerror(v, _SC("null is not a valid key"));
+ 	SQObjectPtr res;
+ 	if(!v->DeleteSlot(*self, key, res)){
++		v->Pop();
+ 		return SQ_ERROR;
+ 	}
+ 	if(pushval)	v->GetUp(-1) = res;
+@@ -1150,6 +1151,8 @@
+ 	SQObjectPtr *o = NULL;
+ 	_GETSAFE_OBJ(v, -1, OT_CLOSURE,o);
+ 	unsigned short tag = SQ_BYTECODE_STREAM_TAG;
++	if(_closure(*o)->_function->_noutervalues) 
++		return sq_throwerror(v,_SC("a closure with free valiables bound it cannot be serialized"));
+ 	if(w(up,&tag,2) != 2)
+ 		return sq_throwerror(v,_SC("io error"));
+ 	if(!_closure(*o)->Save(v,up,w))
+Index: squirrel/sqbaselib.cpp
+===================================================================
+--- squirrel/sqbaselib.cpp	(revision 1)
++++ squirrel/sqbaselib.cpp	(working copy)
+@@ -975,7 +975,7 @@
+ 		_thread(o)->Push(_thread(o)->_roottable);
+ 		for(SQInteger i = 2; i<(nparams+1); i++)
+ 			sq_move(_thread(o),v,i);
+-		if(SQ_SUCCEEDED(sq_call(_thread(o),nparams,SQTrue,SQFalse))) {
++		if(SQ_SUCCEEDED(sq_call(_thread(o),nparams,SQTrue,SQTrue))) {
+ 			sq_move(v,_thread(o),-1);
+ 			sq_pop(_thread(o),1);
+ 			return 1;
+Index: squirrel/sqvm.cpp
+===================================================================
+--- squirrel/sqvm.cpp	(revision 1)
++++ squirrel/sqvm.cpp	(working copy)
+@@ -1275,9 +1275,8 @@
+ 				return FALLBACK_OK;
+ 			}
+ 			else {
++				Pop(2);
+ 				if(type(_lasterror) != OT_NULL) { //NULL means "clean failure" (not found)
+-					//error
+-					Pop(2);
+ 					return FALLBACK_ERROR;
+ 				}
+ 			}
