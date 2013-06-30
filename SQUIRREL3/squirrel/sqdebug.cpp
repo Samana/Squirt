@@ -116,3 +116,36 @@ void SQVM::Raise_ParamTypeError(SQInteger nparam,SQInteger typemask,SQInteger ty
 	}
 	Raise_Error(_SC("parameter %d has an invalid type '%s' ; expected: '%s'"), nparam, IdType2Name((SQObjectType)type), _stringval(exptypes));
 }
+
+extern "C" {
+
+static PrintfFuncType _printfFunc =
+#ifdef SQUNICODE
+	&wprintf;
+#else
+	&printf;
+#endif
+
+void sq_setstaticprintffunc(PrintfFuncType printfFunc)
+{
+	if(printfFunc == nullptr)
+	{
+		_printfFunc =
+#ifdef SQUNICODE
+		&wprintf;
+#else
+		&printf;
+#endif
+	}
+	else
+	{
+		_printfFunc = printfFunc;
+	}
+}
+
+PrintfFuncType sq_getstaticprintffunc()
+{
+	return _printfFunc;
+}
+
+}

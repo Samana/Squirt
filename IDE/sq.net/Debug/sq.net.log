@@ -1,0 +1,3 @@
+﻿squirrel.lib(sqdebug.obj) : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:LBR' specification
+sq.net.obj : warning LNK4248: unresolved typeref token (01000011) for 'SQVM'; image may not run
+  sq.net.vcxproj -> C:\Projects\Squirt\Squirt_git\build\msvc\Debug\sq.net.dll

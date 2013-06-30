@@ -26,6 +26,15 @@ const SQChar* GetStringFromAstNodeType(SQAstNodeType type)
 		_SC("Local"),
 		_SC("FunctionParam"),
 		_SC("FunctionDef"),
+		_SC("If"),
+		_SC("While"),
+		_SC("DoWhile"),
+		_SC("For"),
+		_SC("Foreach"),
+		_SC("Switch"),
+		_SC("ReturnYield"),
+		_SC("Try"),
+		_SC("Throw"),
 		_SC("MAX"),
 	};
 
@@ -34,7 +43,7 @@ const SQChar* GetStringFromAstNodeType(SQAstNodeType type)
 
 void SQAstNode::Dump(SQInteger nodedepth, SQVM* vm)
 {
-	for(int i=0; i<nodedepth; i++) { printf("  "); }
+	for(int i=0; i<nodedepth; i++) { scprintf(_SC("  ")); }
 	scprintf(GetStringFromAstNodeType(this->GetNodeType()));
 	SQObjectPtr strIdentifier;
 	vm->ToString(_identifier, strIdentifier);

@@ -96,22 +96,29 @@ namespace SqWrite
 		{
 		}
 
-		private void BtnGo_Click(object sender, RoutedEventArgs e)
+		private async void BtnGo_Click(object sender, RoutedEventArgs e)
 		{
 			if (ActiveDocument != null)
 			{
-				var bSucComp = m_VM.compilestatic(new string[] { ActiveDocument.DocumentFileName }, "test", true);
-				m_VM.pushroottable();
-				var bSucCall = m_VM.call(1, false, true);
+				BtnGo.IsEnabled = false;
+				var fileName = ActiveDocument.DocumentFileName;
+				await Task.Run(delegate
+				{
+					var bSucComp = m_VM.compilestatic(new string[] { fileName }, "test", true);
+					m_VM.pushroottable();
+					var bSucCall = m_VM.call(1, false, true);
+				});
+				BtnGo.IsEnabled = true;
 			}
 		}
 
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
+			TextBoxWriter tbw = new TextBoxWriter(TextBoxOutput);
+			System.Console.SetError(tbw);
+			System.Console.SetOut(tbw);
+			Console.WriteLine("...");
 			m_VM = new SQVM();
-			//TextBoxWriter tbw = new TextBoxWriter(TextBoxOutput);
-			//System.Console.SetError(tbw);
-			//System.Console.SetOut(tbw);
 		}
 
 		private void Window_Closed(object sender, EventArgs e)
@@ -121,6 +128,11 @@ namespace SqWrite
 				m_VM.Dispose();
 				m_VM = null;
 			}
+		}
+
+		private void BtnConsoleClear_Click(object sender, RoutedEventArgs e)
+		{
+			TextBoxOutput.Document.Blocks.Clear();
 		}
 	}
 }

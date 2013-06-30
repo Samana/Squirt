@@ -150,7 +150,7 @@ typedef wchar_t SQChar;
 #define scisalpha	iswalpha
 #define sciscntrl	iswcntrl
 #define scisalnum	iswalnum
-#define scprintf	wprintf
+#define scprintf	sq_getstaticprintffunc()	//wprintf
 #define MAX_CHAR 0xFFFF
 //ADDED
 #ifdef _MSC_VER
@@ -181,7 +181,7 @@ typedef char SQChar;
 #define sciscntrl	iscntrl
 #define scisalpha	isalpha
 #define scisalnum	isalnum
-#define scprintf	printf
+#define scprintf	sq_getstaticprintffunc()	//printf
 #define MAX_CHAR 0xFF
 #endif
 
@@ -483,6 +483,10 @@ SQUIRREL_API void sq_free(void *p,SQUnsignedInteger size);
 SQUIRREL_API SQRESULT sq_stackinfos(HSQUIRRELVM v,SQInteger level,SQStackInfos *si);
 SQUIRREL_API void sq_setdebughook(HSQUIRRELVM v);
 SQUIRREL_API void sq_setnativedebughook(HSQUIRRELVM v,SQDEBUGHOOK hook);
+
+typedef int (*PrintfFuncType)(const SQChar*, ...);
+SQUIRREL_API void sq_setstaticprintffunc(PrintfFuncType printfFunc);
+SQUIRREL_API PrintfFuncType sq_getstaticprintffunc();
 
 /*UTILITY MACRO*/
 #define sq_isnumeric(o) ((o)._type&SQOBJECT_NUMERIC)

@@ -113,7 +113,7 @@ public:
 	void Lex()
 	{
 		_token = _lex.Lex();
-		//printf("line %d, col %d\n", _lex._currentline, _lex._currentcolumn);
+		//scprintf("line %d, col %d\n", _lex._currentline, _lex._currentcolumn);
 	}
 	SQObject Expect(SQInteger tok)
 	{
@@ -248,13 +248,17 @@ public:
 		case TK_LOCAL:		LocalDeclStatement();	break;
 		case TK_RETURN:
 		case TK_YIELD: {
+			BEGIN_AST_NODE(SQAstNode_ReturnYield);
+
 			SQOpcode op;
 			if(_token == TK_RETURN) {
 				op = _OP_RETURN;
+				_currastnodeex->_identifier = _fs->CreateString(_SC(".return"));
 			}
 			else {
 				op = _OP_YIELD;
 				_fs->_bgenerator = true;
+				_currastnodeex->_identifier = _fs->CreateString(_SC(".yield"));
 			}
 			Lex();
 			if(!IsEndOfStatement()) {
@@ -271,6 +275,8 @@ public:
 				_fs->_returnexp = -1;
 				_fs->AddInstruction(op, 0xFF,0,_fs->GetStackSize()); 
 			}
+
+			END_AST_NODE;
 			break;}
 		case TK_BREAK:
 			if(_fs->_breaktargets.size() <= 0)Error(_SC("'break' has to be in a loop block"));
@@ -301,7 +307,14 @@ public:
 		case TK_ENUM:
 			EnumStatement();
 			break;
-		case _SC('{'):{
+		case _SC('{'):
+			{
+				BEGIN_AST_NODE(SQAstNode_CodeBlock);
+				if(_currastnodeex->_parent->GetNodeType() == SQAST_FunctionDef)
+				{
+					_currastnodeex->_identifier = _fs->CreateString(_SC(".funcbody"));
+				}
+
 				BEGIN_SCOPE();
 				Lex();
 				Statements();
@@ -312,6 +325,7 @@ public:
 				else {
 					END_SCOPE_NO_CLOSE();
 				}
+				END_AST_NODE;
 			}
 			break;
 		case TK_TRY:
@@ -1665,8 +1679,6 @@ public:
 			_fs->PopTarget();
 		}
 				
-		BEGIN_AST_NODE(SQAstNode_CodeBlock);
-		_currastnodeex->_identifier = _fs->CreateString(_SC("func_body"));
 		SQFuncState *currchunk = _fs;
 		_fs = funcstate;
 		if(lambda) { 
@@ -1686,7 +1698,6 @@ public:
 		_fs = currchunk;
 		_fs->_functions.push_back(func);
 		_fs->PopChildState();
-		END_AST_NODE;
 		END_AST_NODE;
 	}
 	void ResolveBreaks(SQFuncState *funcstate, SQInteger ntoresolve)

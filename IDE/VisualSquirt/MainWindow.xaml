@@ -29,7 +29,7 @@
                 <Button x:Name="BtnRedo" Content="Redo" Click="BtnRedo_Click"></Button>
             </ToolBar>
             <ToolBar Height="28">
-                <Button Content="Go" VerticalAlignment="Stretch" Click="BtnGo_Click"/>
+                <Button x:Name="BtnGo" Content="Go" VerticalAlignment="Stretch" Click="BtnGo_Click"/>
                 <Separator/>
                 <Button Content="Step Through"></Button>
                 <Button Content="Step In"></Button>
@@ -46,7 +46,17 @@
                     <xcad:LayoutAnchorablePaneGroup DockHeight="300">
                         <xcad:LayoutAnchorablePane>
                             <xcad:LayoutAnchorable ContentId="OutputWindow" Title="Output">
-                                <TextBox x:Name="TextBoxOutput" IsReadOnly="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Width="Auto" Height="Auto"></TextBox>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="28"/>
+                                        <RowDefinition Height="35*"/>
+                                    </Grid.RowDefinitions>
+                                    <ToolBar Grid.Row="0">
+                                        <Button Content="Clear" Click="BtnConsoleClear_Click"></Button>
+                                    </ToolBar>
+                                    <RichTextBox x:Name="TextBoxOutput" Grid.Row="1" CaretBrush="White" Background="Black" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible" IsReadOnly="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Width="Auto" Height="Auto" FontFamily="Consolas" Grid.RowSpan="2" FontSize="14">
+                                    </RichTextBox>
+                                </Grid>
                             </xcad:LayoutAnchorable>
                         </xcad:LayoutAnchorablePane>
                     </xcad:LayoutAnchorablePaneGroup>

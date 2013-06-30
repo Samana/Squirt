@@ -23,6 +23,15 @@ enum SQAstNodeType
 	SQAST_Local,
 	SQAST_FunctionParam,
 	SQAST_FunctionDef,
+	SQAST_If,
+	SQAST_While,
+	SQAST_DoWhile,
+	SQAST_For,
+	SQAST_Foreach,
+	SQAST_Switch,
+	SQAST_ReturnYield,
+	SQAST_Try,
+	SQAST_Throw,
 	SQAST_MAX,
 };
 
@@ -176,6 +185,76 @@ struct SQAstNode_FunctionDef : public SQAstNode_Expr {
 
 	sqvector<SQAstNode_Local*> _params;
 	SQAstNode_CodeBlock* _body;
+};
+
+struct SQAstNode_If : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_If);
+	virtual ~SQAstNode_If() { }
+	
+	SQAstNode_Expr* _condition;
+	SQAstNode_CodeBlock* _trueblock;
+	SQAstNode_CodeBlock* _falseblock;
+};
+
+struct SQAstNode_While : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_While);
+	virtual ~SQAstNode_While() { }
+
+	SQAstNode_Expr* _condition;
+	SQAstNode_CodeBlock* _loopblock;
+};
+
+struct SQAstNode_For : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_For);
+	virtual ~SQAstNode_For() { }
+
+	SQAstNode_Expr* _init;
+	SQAstNode_Expr* _condition;
+	SQAstNode_Expr* _inc;
+	SQAstNode_CodeBlock* _loopblock;
+};
+struct SQAstNode_Foreach : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_Foreach);
+	virtual ~SQAstNode_Foreach() { }
+
+	SQObjectPtr _indexid;
+	SQObjectPtr _valueid;
+	SQAstNode_Expr* _enumerable;
+	SQAstNode_CodeBlock* _loopblock;
+};
+struct SQAstNode_Switch : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_Switch);
+	virtual ~SQAstNode_Switch() { }
+
+	SQAstNode_Expr* _eval;
+	struct Case
+	{
+		SQAstNode_Expr* _value;
+		SQAstNode_CodeBlock* _caseblock;
+	};
+	sqvector<Case> _cases;
+};
+struct SQAstNode_ReturnYield : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_ReturnYield);
+	virtual ~SQAstNode_ReturnYield() { }
+
+	SQAstNode_Expr* _retvalue;
+};
+
+struct SQAstNode_Try : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_Try);
+	virtual ~SQAstNode_Try() { }
+
+	SQAstNode_CodeBlock* _tryblock;
+	SQObjectPtr _catchid;
+	SQAstNode_CodeBlock* _catchblock;
+};
+
+struct SQAstNode_Throw : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_Throw);
+	virtual ~SQAstNode_Throw() { }
+
+	SQAstNode_Expr* _throw;
 };
 
 //------------------------------------------------------------------------------------------------

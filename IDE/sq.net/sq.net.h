@@ -31,13 +31,48 @@ namespace sqnet {
 		}
 	};
 
-	void Print(const SQChar* str)
+	public ref class Cons
 	{
-		System::Console::WriteLine(gcnew System::String(str));
+	public:
+		property static System::Windows::Media::Color ForegroundColor;
+		property static System::Windows::Media::Color BackgroundColor;
+
+		static Cons()
+		{
+			ForegroundColor = System::Windows::Media::Colors::Gray;
+			BackgroundColor = System::Windows::Media::Colors::Black;
+		}
+	};
+
+	int Print(const SQChar* str)
+	{
+		String^ tmp = gcnew System::String(str);
+		Cons::ForegroundColor = System::Windows::Media::Colors::LimeGreen;
+		System::Console::Write(tmp);
+		return tmp->Length;
 	}
 
 #pragma managed(push, off)
 	
+	int StaticPrintFunc(const SQChar* fmt, ...)
+	{
+		static const int MAX_OUTPUT_STRING = 65536;
+		std::vector<SQChar> buf(512);
+		while(buf.size() < MAX_OUTPUT_STRING)
+		{
+			va_list l;
+ 			va_start(l, fmt);
+			if(_vsntprintf_s(&buf[0], buf.size(), buf.size() - 1, fmt, l) > 0)
+			{
+				return Print(&buf[0]);
+				break;
+			}
+			va_end(l);
+			buf.resize(buf.size() * 2);
+		}
+		return -1;
+	}
+
 	void PrintFunc(HSQUIRRELVM vm, const SQChar* fmt, ...)
 	{
 		static const int MAX_OUTPUT_STRING = 65536;
@@ -65,9 +100,8 @@ namespace sqnet {
 			gcnew System::String(source),
 			line,
 			column);
-		Console::ForegroundColor = System::ConsoleColor::Red;
+		Cons::ForegroundColor = System::Windows::Media::Colors::Red;
 		Console::WriteLine(str);
-		Console::ResetColor();
 	}
 
 	SQInteger OpenSrcFunc(SQUserPointer srcTextOut, SQUserPointer srcLenOut, SQUserPointer srcNameOut, SQInteger index, SQUserPointer up)
@@ -114,6 +148,11 @@ namespace sqnet {
 		HSQUIRRELVM m_VM;
 
 	public:
+		static SQVM()
+		{
+			sq_setstaticprintffunc(&StaticPrintFunc);
+		}
+
 		SQVM()
 			: m_VM(nullptr)
 		{

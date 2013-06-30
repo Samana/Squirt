@@ -434,7 +434,7 @@ void SqJitEngine::SQ_LLVM_OBJECTPTR_ASSIGN(SQObjectPtr* src, SQObjectPtr* dst)
 
 void SqJitEngine::SQ_LLVM_INSTRUCTION_EXEC_HOOK(CallingContext* callingctx, SQInteger nip)
 {
-	printf("IP = %d, stkbase = %d\n", nip, callingctx->VMPtr->_stackbase);
+	scprintf(_SC("IP = %d, stkbase = %d\n"), nip, callingctx->VMPtr->_stackbase);
 }
 
 void SqJitEngine::SQ_LLVM_ADD(CallingContext* callingctx, SQObjectPtr* dst, SQObjectPtr* o1, SQObjectPtr* o2)
