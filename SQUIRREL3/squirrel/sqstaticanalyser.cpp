@@ -20,12 +20,18 @@ const SQChar* GetStringFromAstNodeType(SQAstNodeType type)
 		_SC("CodeBlock"),
 		_SC("Constant"),
 		_SC("Expr"),
+		_SC("UnaryExpr"),
+		_SC("BinaryExpr"),
+		_SC("AssignmentExpr"),
+		_SC("CondEvalExpr"),
+		_SC("Var"),
 		_SC("Statement"),
 		_SC("Variable"),
 		_SC("Member"),
 		_SC("Local"),
 		_SC("FunctionParam"),
 		_SC("FunctionDef"),
+		_SC("Call"),
 		_SC("If"),
 		_SC("While"),
 		_SC("DoWhile"),
@@ -58,14 +64,14 @@ void SQAstNode::Dump(SQInteger nodedepth, SQVM* vm)
 
 bool SQAstNode_NamespaceBase::AddNamespace(SQAstNode_Namespace* pns)
 {
-	AddCommonChild(pns);
+	pns->SetParent(this);
 	_namespaces.push_back(pns);
 	return true;
 }
 
 bool SQAstNode_NamespaceBase::AddClass(SQAstNode_Class* pcl)
 {
-	AddCommonChild(pcl);
+	pcl->SetParent(this);
 	_classes.push_back(pcl);
 	return true;
 }

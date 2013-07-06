@@ -75,9 +75,105 @@ struct SQScope {
 								_currastnode->_startcol = _lex._lasttokencolumn;	\
 								TYPE* _currastnodeex = (TYPE*)_currastnode;
 
+#define BEGIN_AST_NODE_PREFIX( TYPE )	{	SQAstNode* _lastastnode = _currastnode->_commonchildren.size() > 0 ? _currastnode->_commonchildren[_currastnode->_commonchildren.size() - 1] : NULL;	\
+								_currastnode = SQAstNodeFactory::CreateAstNode<TYPE>(_lastastnode == NULL ? NULL : _lastastnode->_parent);	\
+								if(_lastastnode != NULL) _lastastnode->SetParent(_currastnode);	\
+								_currastnode->_startline = _lex._lasttokenline;	\
+								_currastnode->_startcol = _lex._lasttokencolumn;	\
+								TYPE* _currastnodeex = (TYPE*)_currastnode;
+
 #define END_AST_NODE	_currastnode->_endline = _lex._lasttokenline;	\
 						_currastnode->_endcol = _lex._lasttokencolumn;	\
 						_currastnode = _currastnode->_parent; }
+
+
+const SQChar* s_OpCodeTokens[] =
+{
+	_SC(""),	//	_OP_LINE=				0x00,	
+	_SC(""),	//	_OP_LOAD=				0x01,
+	_SC(""),	//	_OP_LOADINT=			0x02,
+	_SC(""),	//	_OP_LOADFLOAT=			0x03,
+	_SC(""),	//	_OP_DLOAD=				0x04,
+	_SC(""),	//	_OP_TAILCALL=			0x05,	
+	_SC(""),	//	_OP_CALL=				0x06,	
+	_SC(""),	//	_OP_PREPCALL=			0x07,	
+	_SC(""),	//	_OP_PREPCALLK=			0x08,	
+	_SC(""),	//	_OP_GETK=				0x09,	
+	_SC(""),	//	_OP_MOVE=				0x0A,	
+	_SC(""),	//	_OP_NEWSLOT=			0x0B,	
+	_SC(""),	//	_OP_DELETE=				0x0C,	
+	_SC(""),	//	_OP_SET=				0x0D,	
+	_SC(""),	//	_OP_GET=				0x0E,
+	_SC("=="),	//	_OP_EQ=					0x0F,
+	_SC("!="),	//	_OP_NE=					0x10,
+	_SC("+"),	//	_OP_ADD=				0x11,
+	_SC("-"),	//	_OP_SUB=				0x12,
+	_SC("*"),	//	_OP_MUL=				0x13,
+	_SC("/"),	//	_OP_DIV=				0x14,
+	_SC("%"),	//	_OP_MOD=				0x15,
+	_SC(""),	//	_OP_BITW=				0x16,
+	_SC(""),	//	_OP_RETURN=				0x17,	
+	_SC(""),	//	_OP_LOADNULLS=			0x18,	
+	_SC(""),	//	_OP_LOADROOT=			0x19,
+	_SC(""),	//	_OP_LOADBOOL=			0x1A,
+	_SC(""),	//	_OP_DMOVE=				0x1B,	
+	_SC(""),	//	_OP_JMP=				0x1C,	
+	//_SC(""),	//	//_OP_JNZ=				0x1D,
+	_SC(""),	//	_OP_JCMP=				0x1D,
+	_SC(""),	//	_OP_JZ=					0x1E,	
+	_SC(""),	//	_OP_SETOUTER=			0x1F,	
+	_SC(""),	//	_OP_GETOUTER=			0x20,	
+	_SC(""),	//	_OP_NEWOBJ=				0x21,
+	_SC(""),	//	_OP_APPENDARRAY=		0x22,	
+	_SC(""),	//	_OP_COMPARITH=			0x23,	
+	_SC(".++x"),	//	_OP_INC=				0x24,	
+	_SC(".++x(L)"),	//	_OP_INCL=				0x25,	
+	_SC(".x++"),	//	_OP_PINC=				0x26,	
+	_SC(".x++(L)"),	//	_OP_PINCL=				0x27,	
+	_SC(""),	//	_OP_CMP=				0x28,
+	_SC(".in"),	//	_OP_EXISTS=				0x29,	
+	_SC(".is"),	//	_OP_INSTANCEOF=			0x2A,
+	_SC("&&"),	//	_OP_AND=				0x2B,
+	_SC("||"),	//	_OP_OR=					0x2C,
+	_SC(".neg"),	//	_OP_NEG=				0x2D,
+	_SC("!"),	//	_OP_NOT=				0x2E,
+	_SC("~"),	//	_OP_BWNOT=				0x2F,	
+	_SC(""),	//	_OP_CLOSURE=			0x30,	
+	_SC(""),	//	_OP_YIELD=				0x31,	
+	_SC(""),	//	_OP_RESUME=				0x32,
+	_SC(""),	//	_OP_FOREACH=			0x33,
+	_SC(""),	//	_OP_POSTFOREACH=		0x34,
+	_SC(""),	//	_OP_CLONE=				0x35,
+	_SC(""),	//	_OP_TYPEOF=				0x36,
+	_SC(""),	//	_OP_PUSHTRAP=			0x37,
+	_SC(""),	//	_OP_POPTRAP=			0x38,
+	_SC(""),	//	_OP_THROW=				0x39,
+	_SC(""),	//	_OP_NEWSLOTA=			0x3A,
+	_SC(""),	//	_OP_GETBASE=			0x3B,
+	_SC(""),	//	_OP_CLOSE=				0x3C,
+	_SC(".as"),	//	_OP_DYNAMICCAST=		0x3D,
+};
+
+const SQChar* s_BWOpToken[] =
+{
+	_SC("&"), //BW_AND = 0,
+	_SC(""),
+	_SC("|"), //BW_OR = 2,	
+	_SC("^"), //BW_XOR = 3,
+	_SC("<<"), //BW_SHIFTL = 4,
+	_SC(">>"), //BW_SHIFTR = 5,
+	_SC(">>>"), //BW_USHIFTR = 6
+};
+
+const SQChar* s_CmpToken[] =
+{
+	_SC(">"),	//CMP_G = 0,
+	_SC(""),
+	_SC(">="),	//CMP_GE = 2,	
+	_SC("<"),	//CMP_L = 3,
+	_SC("<="),	//CMP_LE = 4,
+	_SC("<=>"),	//CMP_3W = 5
+};
 
 //FIXME:
 #define SQ_CMPL_LOG scprintf
@@ -95,6 +191,13 @@ public:
 		_scope.stacksize = 0;
 		_astroot = NULL;
 		compilererror = NULL;
+	}
+	~SQCompiler()
+	{
+		if(_astroot)
+		{
+			delete _astroot;
+		}
 	}
 	static void ThrowError(void *ud, const SQChar *s) {
 		SQCompiler *c = (SQCompiler *)ud;
@@ -470,14 +573,18 @@ public:
 		_es.epos      = -1;
 		_es.donot_get = false;
 		LogicalOrExp();
+		const SQChar* idf = NULL;
 		switch(_token)  {
-		case _SC('='):
-		case TK_NEWSLOT:
-		case TK_MINUSEQ:
-		case TK_PLUSEQ:
-		case TK_MULEQ:
-		case TK_DIVEQ:
-		case TK_MODEQ:{
+		case _SC('='):		idf = idf ? idf : _SC("=");
+		case TK_NEWSLOT:	idf = idf ? idf : _SC("<-");
+		case TK_MINUSEQ:	idf = idf ? idf : _SC("-=");
+		case TK_PLUSEQ:		idf = idf ? idf : _SC("+=");
+		case TK_MULEQ:		idf = idf ? idf : _SC("*=");
+		case TK_DIVEQ:		idf = idf ? idf : _SC("/=");
+		case TK_MODEQ:		idf = idf ? idf : _SC("%=");
+			{
+			BEGIN_AST_NODE_PREFIX(SQAstNode_AssignmentExpr);
+			_currastnode->_identifier = _fs->CreateString(idf);
 			SQInteger op = _token;
 			SQInteger ds = _es.etype;
 			SQInteger pos = _es.epos;
@@ -520,9 +627,12 @@ public:
 				EmitCompoundArith(op, ds, pos);
 				break;
 			}
+			END_AST_NODE;
 			}
 			break;
 		case _SC('?'): {
+			BEGIN_AST_NODE_PREFIX(SQAstNode_CondEvalExpr);
+			_currastnode->_identifier = _fs->CreateString(_SC("?:"));
 			Lex();
 			_fs->AddInstruction(_OP_JZ, _fs->PopTarget());
 			SQInteger jzpos = _fs->GetCurrentPos();
@@ -540,6 +650,7 @@ public:
 			_fs->SetIntructionParam(jmppos, 1, _fs->GetCurrentPos() - jmppos);
 			_fs->SetIntructionParam(jzpos, 1, endfirstexp - jzpos + 1);
 			_fs->SnoozeOpt();
+			END_AST_NODE;
 			}
 			break;
 		}
@@ -547,14 +658,33 @@ public:
 	}
 	template<typename T> void BIN_EXP(SQOpcode op, T f,SQInteger op3 = 0)
 	{
+		BEGIN_AST_NODE_PREFIX(SQAstNode_BinaryExpr);
+		const SQChar* optoken;
+		if(op == _OP_BITW)
+		{
+			optoken = s_BWOpToken[op3];
+		}
+		else if(op == _OP_CMP)
+		{
+			optoken = s_CmpToken[op3];
+		}
+		else
+		{
+			optoken = s_OpCodeTokens[op];
+		}
+
+		_currastnode->_identifier = _fs->CreateString(optoken);
 		Lex(); (this->*f)();
 		SQInteger op1 = _fs->PopTarget();SQInteger op2 = _fs->PopTarget();
 		_fs->AddInstruction(op, _fs->PushTarget(), op1, op2, op3);
+		END_AST_NODE;
 	}
 	void LogicalOrExp()
 	{
 		LogicalAndExp();
 		for(;;) if(_token == TK_OR) {
+			BEGIN_AST_NODE_PREFIX(SQAstNode_BinaryExpr);
+			_currastnode->_identifier = _fs->CreateString(_SC("||"));
 			SQInteger first_exp = _fs->PopTarget();
 			SQInteger trg = _fs->PushTarget();
 			_fs->AddInstruction(_OP_OR, trg, 0, first_exp, 0);
@@ -566,6 +696,7 @@ public:
 			if(trg != second_exp) _fs->AddInstruction(_OP_MOVE, trg, second_exp);
 			_fs->SnoozeOpt();
 			_fs->SetIntructionParam(jpos, 1, (_fs->GetCurrentPos() - jpos));
+			END_AST_NODE;
 			break;
 		}else return;
 	}
@@ -574,6 +705,8 @@ public:
 		BitwiseOrExp();
 		for(;;) switch(_token) {
 		case TK_AND: {
+			BEGIN_AST_NODE_PREFIX(SQAstNode_BinaryExpr);
+			_currastnode->_identifier = _fs->CreateString(_SC("&&"));
 			SQInteger first_exp = _fs->PopTarget();
 			SQInteger trg = _fs->PushTarget();
 			_fs->AddInstruction(_OP_AND, trg, 0, first_exp, 0);
@@ -585,12 +718,21 @@ public:
 			if(trg != second_exp) _fs->AddInstruction(_OP_MOVE, trg, second_exp);
 			_fs->SnoozeOpt();
 			_fs->SetIntructionParam(jpos, 1, (_fs->GetCurrentPos() - jpos));
+			END_AST_NODE;
 			break;
 			}
-		case TK_IN: BIN_EXP(_OP_EXISTS, &SQCompiler::BitwiseOrExp); break;
-		case TK_INSTANCEOF: BIN_EXP(_OP_INSTANCEOF, &SQCompiler::BitwiseOrExp); break;
-		case TK_IS_OPERATOR: BIN_EXP(_OP_INSTANCEOF, &SQCompiler::BitwiseOrExp); break;
-		case TK_AS_OPERATOR: BIN_EXP(_OP_DYNAMICCAST, &SQCompiler::BitwiseOrExp); break;
+		case TK_IN:
+			BIN_EXP(_OP_EXISTS, &SQCompiler::BitwiseOrExp);
+			break;
+		case TK_INSTANCEOF:
+			BIN_EXP(_OP_INSTANCEOF, &SQCompiler::BitwiseOrExp);
+			break;
+		case TK_IS_OPERATOR:
+			BIN_EXP(_OP_INSTANCEOF, &SQCompiler::BitwiseOrExp);
+			break;
+		case TK_AS_OPERATOR:
+			BIN_EXP(_OP_DYNAMICCAST, &SQCompiler::BitwiseOrExp);
+			break;
 		default:
 			return;
 		}
@@ -695,14 +837,24 @@ public:
 	//if 'pos' != -1 the previous variable is a local variable
 	void PrefixedExpr()
 	{
+		//_currastnode = SQAstNodeFactory::CreateAstNode<TYPE>(_currastnode);
+		//_currastnode->_startline = _lex._lasttokenline;
+		//_currastnode->_startcol = _lex._lasttokencolumn;
+		//TYPE* _currastnodeex = (TYPE*)_currastnode;
 		SQInteger pos = Factor();
 		for(;;) {
 			switch(_token) {
 			case _SC('.'):
 				pos = -1;
-				Lex(); 
+				Lex();
 
-				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(Expect(TK_IDENTIFIER)));
+				BEGIN_AST_NODE_PREFIX(SQAstNode_Expr);
+				_currastnodeex->_identifier = _fs->CreateString(_SC("."));
+				SQObject idf = Expect(TK_IDENTIFIER);
+				BEGIN_AST_NODE(SQAstNode_Constant);
+				_currastnodeex->_identifier = idf;
+				END_AST_NODE;
+				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(idf));
 				if(_es.etype==BASE) {
 					Emit2ArgsOP(_OP_GET);
 					pos = _fs->TopTarget();
@@ -715,6 +867,8 @@ public:
 					}
 					_es.etype = OBJECT;
 				}
+
+				END_AST_NODE;
 				break;
 			case _SC('['):
 				if(_lex._prevtoken == _SC('\n')) Error(_SC("cannot brake deref/or comma needed after [exp]=exp slot declaration"));
@@ -764,6 +918,7 @@ public:
 				return;
 				break;	
 			case _SC('('): 
+				BEGIN_AST_NODE_PREFIX(SQAstNode_Call);
 				switch(_es.etype) {
 					case OBJECT: {
 						SQInteger key     = _fs->PopTarget();  /* location of the key */
@@ -771,22 +926,27 @@ public:
 						SQInteger closure = _fs->PushTarget(); /* location for the closure */
 						SQInteger ttarget = _fs->PushTarget(); /* location for 'this' pointer */
 						_fs->AddInstruction(_OP_PREPCALL, closure, key, table, ttarget);
+						_currastnode->_identifier = _fs->CreateString(_SC(".icall"));
 						}
 						break;
 					case BASE:
 						//Emit2ArgsOP(_OP_GET);
 						_fs->AddInstruction(_OP_MOVE, _fs->PushTarget(), 0);
+						_currastnode->_identifier = _fs->CreateString(_SC(".bcall"));
 						break;
 					case OUTER:
 						_fs->AddInstruction(_OP_GETOUTER, _fs->PushTarget(), _es.epos);
 						_fs->AddInstruction(_OP_MOVE,     _fs->PushTarget(), 0);
+						_currastnode->_identifier = _fs->CreateString(_SC(".ocall"));
 						break;
 					default:
 						_fs->AddInstruction(_OP_MOVE, _fs->PushTarget(), 0);
+						_currastnode->_identifier = _fs->CreateString(_SC(".call"));
 				}
 				_es.etype = EXPR;
 				Lex();
 				FunctionCallArgs();
+				END_AST_NODE;
 				break;
 			default: return;
 			}
@@ -808,22 +968,36 @@ public:
 			END_AST_NODE;
 			break;
 		case TK_BASE:
+			BEGIN_AST_NODE(SQAstNode_Var);
 			Lex();
+			_currastnode->_identifier = _fs->CreateString(_SC(".base"));
 			_fs->AddInstruction(_OP_GETBASE, _fs->PushTarget());
 			_es.etype  = BASE;
 			_es.epos   = _fs->TopTarget();
+			END_AST_NODE;
 			return (_es.epos);
 			break;
 		case TK_IDENTIFIER:
 		case TK_CONSTRUCTOR:
 		case TK_THIS:{
+				BEGIN_AST_NODE(SQAstNode_Var);
+
 				SQObject id;
 				SQObject constant;
 
 				switch(_token) {
-					case TK_IDENTIFIER:  id = _fs->CreateString(_lex._svalue);       break;
-					case TK_THIS:        id = _fs->CreateString(_SC("this"));        break;
-					case TK_CONSTRUCTOR: id = _fs->CreateString(_SC("constructor")); break;
+					case TK_IDENTIFIER:
+						id = _fs->CreateString(_lex._svalue);      
+						_currastnode->_identifier = id;
+						break;
+					case TK_THIS:        
+						id = _fs->CreateString(_SC("this"));        
+						_currastnode->_identifier = _fs->CreateString(_SC(".this"));
+						break;
+					case TK_CONSTRUCTOR:
+						id = _fs->CreateString(_SC("constructor")); 
+						_currastnode->_identifier = _fs->CreateString(_SC(".ctor"));
+						break;
 				}
 
 				SQInteger pos = -1;
@@ -888,14 +1062,18 @@ public:
 					}
 					_es.etype = OBJECT;
 				}
+				END_AST_NODE;
 				return _es.epos;
 			}
 			break;
 		case TK_DOUBLE_COLON:  // "::"
+			BEGIN_AST_NODE(SQAstNode_Constant);
+			_currastnodeex->_identifier = _fs->CreateString(_SC(".root"));
 			_fs->AddInstruction(_OP_LOADROOT, _fs->PushTarget());
 			_es.etype = OBJECT;
 			_token = _SC('.'); /* hack: drop into PrefixExpr, case '.'*/
 			_es.epos = -1;
+			END_AST_NODE;
 			return _es.epos;
 			break;
 		case TK_NULL: 
@@ -994,9 +1172,12 @@ public:
 	}
 	void UnaryOP(SQOpcode op)
 	{
+		BEGIN_AST_NODE(SQAstNode_UnaryExpr);
+		_currastnode->_identifier = _fs->CreateString(s_OpCodeTokens[op]);
 		PrefixedExpr();
 		SQInteger src = _fs->PopTarget();
 		_fs->AddInstruction(op, _fs->PushTarget(), src);
+		END_AST_NODE;
 	}
 	bool NeedGet()
 	{
@@ -1009,6 +1190,8 @@ public:
 	}
 	void FunctionCallArgs()
 	{
+		//assert(_currastnode->GetNodeType() == SQAST_Call);
+		//SQAstNode_Call* _currastnodeex = (SQAstNode_Call*)_currastnode;
 		SQInteger nargs = 1;//this
 		 while(_token != _SC(')')) {
 			 Expression();

@@ -33,6 +33,7 @@ namespace SqWrite
 		static readonly string[] s_Keywords;
 
 		public string DocumentFileName { get; private set; }
+		public TextEditor TextEditor { get { return m_TextEdit; } }
 
 		CompletionWindow m_CompletionWindow;
 
@@ -118,9 +119,24 @@ namespace SqWrite
 				//FIXME : Disable auto complete for now since it's troublesome.
 				//m_TextEdit.TextArea.TextEntering += TextArea_TextEntering;
 				//m_TextEdit.TextArea.TextEntered += TextArea_TextEntered;
+
+				m_TextEdit.TextArea.Caret.PositionChanged += (s, arg) =>
+				{
+					UpdateCursorPos();
+				};
+
+				UpdateCursorPos();
 			}
 			catch (IOException)
 			{
+			}
+		}
+
+		void UpdateCursorPos()
+		{
+			if (MainWindow.Instance.ActiveDocument == this)
+			{
+				MainWindow.Instance.SetDocumentCursorPos(m_TextEdit.TextArea.Caret.Line, m_TextEdit.TextArea.Caret.Column);
 			}
 		}
 

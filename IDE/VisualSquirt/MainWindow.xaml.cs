@@ -15,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Xceed.Wpf.AvalonDock.Layout;
 
 namespace SqWrite
 {
@@ -23,23 +24,27 @@ namespace SqWrite
 	/// </summary>
 	public partial class MainWindow : Window
 	{
-		SQVM m_VM;
-
-		private SqDocument ActiveDocument
+		public static MainWindow Instance
 		{
-			get
-			{
-				var content = m_DockingManager.ActiveContent as Xceed.Wpf.AvalonDock.Layout.LayoutDocument;
-				if (content != null)
-				{
-					return content.Content as SqDocument;
-				}
-				return null;
-			}
+			get;
+			private set;
 		}
+
+		SQVM m_VM;
+		bool IsBuilding = false;
+
+		public SqDocument ActiveDocument
+		{
+			get { return (SqDocument)GetValue(ActiveDocumentProperty); }
+			private set { SetValue(ActiveDocumentProperty, value); }
+		}
+
+		public static readonly DependencyProperty ActiveDocumentProperty =
+			DependencyProperty.Register("ActiveDocument", typeof(SqDocument), typeof(MainWindow), new PropertyMetadata(null));
 
 		public MainWindow()
 		{
+			Instance = this;
 			InitializeComponent();
 			OpenDocument(null);
 		}
@@ -49,12 +54,13 @@ namespace SqWrite
 			SqDocument doc = new SqDocument(fileName);
 			Xceed.Wpf.AvalonDock.Layout.LayoutDocument layoutDoc = new Xceed.Wpf.AvalonDock.Layout.LayoutDocument();
 			layoutDoc.Content = doc;
+			layoutDoc.Closed += layoutDoc_Closed;
 			m_CodeDocumentPane.InsertChildAt(0, layoutDoc);
 			doc.Loaded += (s, e) =>
 			{
 				layoutDoc.Title = System.IO.Path.GetFileName(doc.DocumentFileName);
 			};
-			m_DockingManager.ActiveContent = layoutDoc;
+			m_DockingManager.ActiveContent = doc;
 		}
 
 		void SaveDocument(SqDocument doc)
@@ -62,11 +68,11 @@ namespace SqWrite
 			doc.Save();
 		}
 
-		private void BtnNew_Click(object sender, RoutedEventArgs e)
+		private void ExecCommandNew(RoutedEventArgs e)
 		{
 		}
 
-		private void BtnOpen_Click(object sender, RoutedEventArgs e)
+		private void ExecCommandOpen(RoutedEventArgs e)
 		{
 			OpenFileDialog ofd = new OpenFileDialog();
 			ofd.Filter = "*.nut|*.nut|*.wet|*.wet";
@@ -76,7 +82,7 @@ namespace SqWrite
 			}
 		}
 
-		private void BtnSave_Click(object sender, RoutedEventArgs e)
+		private void ExecCommandSave(RoutedEventArgs e)
 		{
 			if (ActiveDocument != null)
 			{
@@ -84,23 +90,11 @@ namespace SqWrite
 			}
 		}
 
-		private void BtnSaveAll_Click(object sender, RoutedEventArgs e)
-		{
-		}
-
-		private void BtnUndo_Click(object sender, RoutedEventArgs e)
-		{
-		}
-
-		private void BtnRedo_Click(object sender, RoutedEventArgs e)
-		{
-		}
-
-		private async void BtnGo_Click(object sender, RoutedEventArgs e)
+		private async void ExecCommandRun(RoutedEventArgs e)
 		{
 			if (ActiveDocument != null)
 			{
-				BtnGo.IsEnabled = false;
+				IsBuilding = true;
 				var fileName = ActiveDocument.DocumentFileName;
 				await Task.Run(delegate
 				{
@@ -108,7 +102,7 @@ namespace SqWrite
 					m_VM.pushroottable();
 					var bSucCall = m_VM.call(1, false, true);
 				});
-				BtnGo.IsEnabled = true;
+				IsBuilding = false;
 			}
 		}
 
@@ -133,6 +127,78 @@ namespace SqWrite
 		private void BtnConsoleClear_Click(object sender, RoutedEventArgs e)
 		{
 			TextBoxOutput.Document.Blocks.Clear();
+		}
+
+		void layoutDoc_Closed(object sender, EventArgs e)
+		{
+			var doc = (sender as LayoutDocument);
+			if (doc.Content != null && ActiveDocument == doc.Content)
+			{
+				ActiveDocument = null;
+			}
+		}
+
+		private void m_DockingManager_ActiveContentChanged(object sender, EventArgs e)
+		{
+			var content = m_DockingManager.ActiveContent as SqDocument;
+			if (content != null)
+			{
+				ActiveDocument = content as SqDocument;
+			}
+		}
+
+		private void CommandBinding_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+		{
+			if (e.Command == ApplicationCommands.New
+				|| e.Command == ApplicationCommands.Open)
+			{
+				e.CanExecute = true;
+			}
+			else if (e.Command == ApplicationCommands.Save)
+			{
+				e.CanExecute = ActiveDocument != null;	//FIXME: && modified
+			}
+			else if (e.Command == Commands.SaveAll)
+			{
+				e.CanExecute = false;	//Not implemented
+			}
+			else if (e.Command == Commands.Run)
+			{
+				e.CanExecute = ActiveDocument != null && !IsBuilding;
+			}
+			else if (e.Command == Commands.StepThrough
+				|| e.Command == Commands.StepIn
+				|| e.Command == Commands.StepOut
+				|| e.Command == Commands.RunToCursor)
+			{
+			}
+		}
+
+		private void CommandBinding_Executed(object sender, ExecutedRoutedEventArgs e)
+		{
+			if (e.Command == ApplicationCommands.Save)
+			{
+				ExecCommandSave(e);
+			}
+			else if (e.Command == ApplicationCommands.Open)
+			{
+				ExecCommandOpen(e);
+			}
+			else if (e.Command == ApplicationCommands.New)
+			{
+				ExecCommandNew(e);
+			}
+			else if (e.Command == Commands.Run)
+			{
+				ExecCommandRun(e);
+			}
+		}
+
+		//FIXME: Ugly ugly
+		internal void SetDocumentCursorPos(int line, int col)
+		{
+			m_StatusCursorLn.Content = string.Format("Ln {0}", line);
+			m_StatusCursorCol.Content = string.Format("Col {0}", col);
 		}
 	}
 }

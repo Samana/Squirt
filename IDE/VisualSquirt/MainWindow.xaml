@@ -1,12 +1,29 @@
 ﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
+        xmlns:util="clr-namespace:SqWrite.Util"
         x:Class="SqWrite.MainWindow"
         Title="Visual Squirt" Height="750" Width="1000" Loaded="Window_Loaded" Closed="Window_Closed">
+    <Window.CommandBindings>
+        <CommandBinding Command="Save" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="New" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="Open" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="util:Commands.SaveAll" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="util:Commands.Run" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="util:Commands.StepThrough" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="util:Commands.StepIn" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="util:Commands.StepOut" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+        <CommandBinding Command="util:Commands.RunToCursor" CanExecute="CommandBinding_CanExecute" Executed="CommandBinding_Executed"/>
+    </Window.CommandBindings>
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Control" Key="S" Command="Save"></KeyBinding>
+        <KeyBinding Key="F5" Command="util:Commands.Run"></KeyBinding>
+    </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="18"/>
-            <RowDefinition Height="692*"/>
+            <RowDefinition Height="677*"/>
+            <RowDefinition Height="24"/>
         </Grid.RowDefinitions>
         <Menu Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <MenuItem Header="FILE">
@@ -20,23 +37,24 @@
         </Menu>
         <ToolBarTray HorizontalAlignment="Stretch" Height="Auto" Grid.Row="1" VerticalAlignment="Top">
             <ToolBar>
-                <Button x:Name="BtnNew" Content="New" Click="BtnNew_Click"></Button>
-                <Button x:Name="BtnOpen" Content="Open" Click="BtnOpen_Click"></Button>
-                <Button x:Name="BtnSave" Content="Save" Click="BtnSave_Click"></Button>
-                <Button x:Name="BtnSaveAll" Content="Save All" Click="BtnSaveAll_Click"></Button>
+                <Button x:Name="BtnNew" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="New" ></Button>
+                <Button x:Name="BtnOpen" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Open" ></Button>
+                <Button x:Name="BtnSave" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Save" ></Button>
+                <Button x:Name="BtnSaveAll" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.SaveAll" ></Button>
                 <Separator/>
-                <Button x:Name="BtnUndo" Content="Undo" Click="BtnUndo_Click"></Button>
-                <Button x:Name="BtnRedo" Content="Redo" Click="BtnRedo_Click"></Button>
+                <Button x:Name="BtnUndo" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Undo" ></Button>
+                <Button x:Name="BtnRedo" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Redo" ></Button>
             </ToolBar>
             <ToolBar Height="28">
-                <Button x:Name="BtnGo" Content="Go" VerticalAlignment="Stretch" Click="BtnGo_Click"/>
+                <Button x:Name="BtnGo" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.Run" ></Button>
                 <Separator/>
-                <Button Content="Step Through"></Button>
-                <Button Content="Step In"></Button>
-                <Button Content="Step Out"></Button>
+                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepThrough" ></Button>
+                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepIn" ></Button>
+                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepOut" ></Button>
+                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.RunToCursor" ></Button>
             </ToolBar>
         </ToolBarTray>
-        <xcad:DockingManager x:Name="m_DockingManager" HorizontalAlignment="Stretch" Grid.Row="1" VerticalAlignment="Stretch" Margin="0,28,0,0">
+        <xcad:DockingManager x:Name="m_DockingManager" HorizontalAlignment="Stretch" Grid.Row="1" VerticalAlignment="Stretch" Margin="0,28,0,0" ActiveContentChanged="m_DockingManager_ActiveContentChanged">
             <xcad:LayoutRoot>
                 <xcad:LayoutPanel Orientation="Vertical">
                     <xcad:LayoutDocumentPaneGroup>
@@ -63,5 +81,15 @@
                 </xcad:LayoutPanel>
             </xcad:LayoutRoot>
         </xcad:DockingManager>
+        <StatusBar Grid.Row="2">
+            <StatusBarItem x:Name="m_StatusAction" Width="400" Content="Ready"></StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal">
+                    <StatusBarItem x:Name="m_StatusCursorLn" Width="100" Content=""></StatusBarItem>
+                    <StatusBarItem x:Name="m_StatusCursorCol" Width="100" Content=""></StatusBarItem>
+                    <StatusBarItem x:Name="m_StatusEditMode" Width="50" Content="INS"></StatusBarItem>
+                </StackPanel>
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </Window>

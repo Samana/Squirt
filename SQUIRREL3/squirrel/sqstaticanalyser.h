@@ -17,12 +17,18 @@ enum SQAstNodeType
 	SQAST_CodeBlock,
 	SQAST_Constant,
 	SQAST_Expr,
+	SQAST_UnaryExpr,
+	SQAST_BinaryExpr,
+	SQAST_AssignmentExpr,
+	SQAST_CondEvalExpr,
+	SQAST_Var,
 	SQAST_Statement,
 	SQAST_Variable,
 	SQAST_Member,
 	SQAST_Local,
 	SQAST_FunctionParam,
 	SQAST_FunctionDef,
+	SQAST_Call,
 	SQAST_If,
 	SQAST_While,
 	SQAST_DoWhile,
@@ -59,12 +65,35 @@ struct SQAstNode {
 	{
 	}
 
+	virtual ~SQAstNode()
+	{
+		for(SQUnsignedInteger i=0; i<_commonchildren.size(); i++)
+		{
+			delete _commonchildren[i];
+		}
+	}
+
 	virtual SQAstNodeType GetNodeType() const { return SQAST_NODE; }
 
-	virtual bool AddCommonChild(SQAstNode* pchild)
+	virtual bool SetParent(SQAstNode* pParent)
 	{
-		_commonchildren.push_back(pchild);
-		pchild->_parent = this;
+		if(_parent != NULL)
+		{
+			for(SQUnsignedInteger i=0; i<_parent->_commonchildren.size(); i++)
+			{
+				if(_parent->_commonchildren[i] == this)
+				{
+					_parent->_commonchildren.remove(i);
+					break;
+				}
+			}
+		}
+		
+		if(pParent)
+		{
+			pParent->_commonchildren.push_back(this);
+		}
+		_parent = pParent;
 		return true;
 	}
 
@@ -136,12 +165,32 @@ struct SQAstNode_Expr : public SQAstNode {
 	virtual ~SQAstNode_Expr() { }
 };
 
+struct SQAstNode_UnaryExpr : public SQAstNode {
+	AST_NODE_TYPE(SQAST_UnaryExpr);
+	virtual ~SQAstNode_UnaryExpr() { }
+};
+
+struct SQAstNode_BinaryExpr : public SQAstNode_Expr {
+	AST_NODE_TYPE(SQAST_BinaryExpr);
+	virtual ~SQAstNode_BinaryExpr() { }
+};
+
+struct SQAstNode_AssignmentExpr : public SQAstNode_BinaryExpr {
+	AST_NODE_TYPE(SQAST_AssignmentExpr);
+	virtual ~SQAstNode_AssignmentExpr() { }
+};
+
+struct SQAstNode_CondEvalExpr : public SQAstNode_Expr {
+	AST_NODE_TYPE(SQAST_CondEvalExpr);
+	virtual ~SQAstNode_CondEvalExpr() { }
+};
+
 struct SQAstNode_Statement : public SQAstNode {
 	AST_NODE_TYPE(SQAST_Statement);
 	virtual ~SQAstNode_Statement() { }
 };
 
-struct SQAstNode_Constant : public SQAstNode {
+struct SQAstNode_Constant : public SQAstNode_Expr {
 
 	enum ConstantType {
 		CT_Boolean,
@@ -154,6 +203,11 @@ struct SQAstNode_Constant : public SQAstNode {
 
 	AST_NODE_TYPE(SQAST_Constant);
 	virtual ~SQAstNode_Constant() { }
+};
+
+struct SQAstNode_Var : public SQAstNode_Expr {
+	AST_NODE_TYPE(SQAST_Var);
+	virtual ~SQAstNode_Var() { }
 };
 
 struct SQAstNode_Variable : public SQAstNode_Statement {
@@ -185,6 +239,20 @@ struct SQAstNode_FunctionDef : public SQAstNode_Expr {
 
 	sqvector<SQAstNode_Local*> _params;
 	SQAstNode_CodeBlock* _body;
+};
+
+//struct SQAstNode_PrefixedExpr : public SQAstNode_Expr {
+//	AST_NODE_TYPE(SQAST_PrefixedExpr);
+//	virtual ~SQAstNode_PrefixedExpr() { }
+//
+//};
+
+struct SQAstNode_Call : public SQAstNode_Expr {
+	AST_NODE_TYPE(SQAST_Call);
+	virtual ~SQAstNode_Call() { }
+
+	SQAstNode_Expr _func;
+	sqvector<SQAstNode_Expr*> _args;
 };
 
 struct SQAstNode_If : public SQAstNode_Statement {
@@ -266,7 +334,7 @@ struct SQAstNodeFactory
 	static T* CreateAstNode(SQAstNode* parent)
 	{
 		T* ret = new T();
-		parent->AddCommonChild(ret);
+		ret->SetParent(parent);
 		return ret;
 	}
 
