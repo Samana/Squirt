@@ -42,23 +42,27 @@
             <MenuItem Header="WINDOW"/>
             <MenuItem Header="HELP"/>
         </Menu>
-        <ToolBarTray HorizontalAlignment="Stretch" Height="Auto" Grid.Row="1" VerticalAlignment="Top">
-            <ToolBar>
-                <Button x:Name="BtnNew" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="New" ></Button>
-                <Button x:Name="BtnOpen" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Open" ></Button>
-                <Button x:Name="BtnSave" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Save" ></Button>
-                <Button x:Name="BtnSaveAll" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.SaveAll" ></Button>
+        <ToolBarTray HorizontalAlignment="Stretch" Height="Auto" Grid.Row="1" VerticalAlignment="Top" Background="#FFF0F0F0">
+            <ToolBar FontFamily="Segoe UI Symbol" Background="#FFF0F0F0">
+                <Button x:Name="BtnNew" Content="&#xE160;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="New"></Button>
+                <Button x:Name="BtnOpen" Content="&#xE197;"  ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Open"></Button>
+                <Button x:Name="BtnSave" Content="&#xE105;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Save"></Button>
+                <Button x:Name="BtnSaveAll" Content="&#xE1DF;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.SaveAll"></Button>
                 <Separator/>
-                <Button x:Name="BtnUndo" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Undo" ></Button>
-                <Button x:Name="BtnRedo" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="Redo" ></Button>
+                <Button x:Name="BtnUndo" Content="&#xE10E;" Command="Undo"></Button>
+                <Button x:Name="BtnRedo" Content="&#xE10D;" Command="Redo"></Button>
+                <Separator/>
+                <Button x:Name="BtnCut" Content="&#xE16B;" Command="Redo"></Button>
+                <Button x:Name="BtnCopy" Content="&#xE16F;" Command="Redo"></Button>
+                <Button x:Name="BtnPaste" Content="&#xE16D;" Command="Redo"></Button>
             </ToolBar>
-            <ToolBar Height="28">
-                <Button x:Name="BtnGo" Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.Run" ></Button>
+            <ToolBar Height="28" FontFamily="Segoe UI Symbol" Background="#FFF0F0F0">
+                <Button x:Name="BtnGo" Content="&#xE102;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.Run"></Button>
                 <Separator/>
-                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepThrough" ></Button>
-                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepIn" ></Button>
-                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepOut" ></Button>
-                <Button Content="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.RunToCursor" ></Button>
+                <Button Content="&#xE1CD;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepThrough"></Button>
+                <Button Content="&#xE14A;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepIn"></Button>
+                <Button Content="&#xE149;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepOut"></Button>
+                <Button Content="&#xE1CC;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.RunToCursor"></Button>
             </ToolBar>
         </ToolBarTray>
         <xcad:DockingManager x:Name="m_DockingManager" HorizontalAlignment="Stretch" Grid.Row="1" VerticalAlignment="Stretch" Margin="0,28,0,0" ActiveContentChanged="m_DockingManager_ActiveContentChanged">

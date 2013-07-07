@@ -70,23 +70,6 @@ struct SQScope {
 					if(__nbreaks__>0)ResolveBreaks(_fs,__nbreaks__); \
 					_fs->_breaktargets.pop_back();_fs->_continuetargets.pop_back();}
 
-#define BEGIN_AST_NODE( TYPE )	{ _currastnode = SQAstNodeFactory::CreateAstNode<TYPE>(_currastnode);	\
-								_currastnode->_startline = _lex._lasttokenline;	\
-								_currastnode->_startcol = _lex._lasttokencolumn;	\
-								TYPE* _currastnodeex = (TYPE*)_currastnode;
-
-#define BEGIN_AST_NODE_PREFIX( TYPE )	{	SQAstNode* _lastastnode = _currastnode->_commonchildren.size() > 0 ? _currastnode->_commonchildren[_currastnode->_commonchildren.size() - 1] : NULL;	\
-								_currastnode = SQAstNodeFactory::CreateAstNode<TYPE>(_lastastnode == NULL ? NULL : _lastastnode->_parent);	\
-								if(_lastastnode != NULL) _lastastnode->SetParent(_currastnode);	\
-								_currastnode->_startline = _lex._lasttokenline;	\
-								_currastnode->_startcol = _lex._lasttokencolumn;	\
-								TYPE* _currastnodeex = (TYPE*)_currastnode;
-
-#define END_AST_NODE	_currastnode->_endline = _lex._lasttokenline;	\
-						_currastnode->_endcol = _lex._lasttokencolumn;	\
-						_currastnode = _currastnode->_parent; }
-
-
 const SQChar* s_OpCodeTokens[] =
 {
 	_SC(""),	//	_OP_LINE=				0x00,	
@@ -351,17 +334,17 @@ public:
 		case TK_LOCAL:		LocalDeclStatement();	break;
 		case TK_RETURN:
 		case TK_YIELD: {
-			BEGIN_AST_NODE(SQAstNode_ReturnYield);
+			BEGIN_AST_NODE<SQAstNode_ReturnYield>();
 
 			SQOpcode op;
 			if(_token == TK_RETURN) {
 				op = _OP_RETURN;
-				_currastnodeex->_identifier = _fs->CreateString(_SC(".return"));
+				_currastnode->_identifier = _fs->CreateString(_SC(".return"));
 			}
 			else {
 				op = _OP_YIELD;
 				_fs->_bgenerator = true;
-				_currastnodeex->_identifier = _fs->CreateString(_SC(".yield"));
+				_currastnode->_identifier = _fs->CreateString(_SC(".yield"));
 			}
 			Lex();
 			if(!IsEndOfStatement()) {
@@ -379,7 +362,7 @@ public:
 				_fs->AddInstruction(op, 0xFF,0,_fs->GetStackSize()); 
 			}
 
-			END_AST_NODE;
+			END_AST_NODE();
 			break;}
 		case TK_BREAK:
 			if(_fs->_breaktargets.size() <= 0)Error(_SC("'break' has to be in a loop block"));
@@ -412,10 +395,10 @@ public:
 			break;
 		case _SC('{'):
 			{
-				BEGIN_AST_NODE(SQAstNode_CodeBlock);
+				SQAstNode_CodeBlock* _currastnodeex = BEGIN_AST_NODE<SQAstNode_CodeBlock>();
 				if(_currastnodeex->_parent->GetNodeType() == SQAST_FunctionDef)
 				{
-					_currastnodeex->_identifier = _fs->CreateString(_SC(".funcbody"));
+					_currastnode->_identifier = _fs->CreateString(_SC(".funcbody"));
 				}
 
 				BEGIN_SCOPE();
@@ -428,7 +411,7 @@ public:
 				else {
 					END_SCOPE_NO_CLOSE();
 				}
-				END_AST_NODE;
+				END_AST_NODE();
 			}
 			break;
 		case TK_TRY:
@@ -454,7 +437,7 @@ public:
 			break;
 		case TK_USING:
 			{
-				BEGIN_AST_NODE(SQAstNode_Using);
+				BEGIN_AST_NODE<SQAstNode_Using>();
 
 				SQArray* ns = SQArray::Create(_ss(_vm), 0);
 				SQObjectPtr tmp;
@@ -483,14 +466,14 @@ public:
 				fullPath[fullPath.size() - 1] = 0;
 				SQ_CMPL_LOG(_SC("'\n"));
 
-				_currastnodeex->_identifier = SQString::Create(_ss(_vm), &fullPath[0]);
+				_currastnode->_identifier = SQString::Create(_ss(_vm), &fullPath[0]);
 
-				END_AST_NODE;
+				END_AST_NODE();
 			}
 			break;
 		case TK_NAMESPACE:
 			{
-				BEGIN_AST_NODE(SQAstNode_Namespace);
+				BEGIN_AST_NODE<SQAstNode_Namespace>();
 
 				Lex();
 				SQObjectPtr nsId = Expect(TK_IDENTIFIER);
@@ -499,13 +482,13 @@ public:
 					Error(_SC("Invalid namespace name."));
 				}
 
-				_currastnodeex->_identifier = nsId;
+				_currastnode->_identifier = nsId;
 
 				Expect('{');
 				Statements();
 				Expect('}');
 
-				END_AST_NODE;
+				END_AST_NODE();
 			}
 			break;
 		default:
@@ -590,7 +573,7 @@ public:
 		case TK_DIVEQ:		idf = idf ? idf : _SC("/=");
 		case TK_MODEQ:		idf = idf ? idf : _SC("%=");
 			{
-			BEGIN_AST_NODE_PREFIX(SQAstNode_AssignmentExpr);
+			BEGIN_AST_NODE_PREFIX<SQAstNode_AssignmentExpr>();
 			_currastnode->_identifier = _fs->CreateString(idf);
 			SQInteger op = _token;
 			SQInteger ds = _es.etype;
@@ -634,11 +617,11 @@ public:
 				EmitCompoundArith(op, ds, pos);
 				break;
 			}
-			END_AST_NODE;
+			END_AST_NODE();
 			}
 			break;
 		case _SC('?'): {
-			BEGIN_AST_NODE_PREFIX(SQAstNode_CondEvalExpr);
+			BEGIN_AST_NODE_PREFIX<SQAstNode_CondEvalExpr>();
 			_currastnode->_identifier = _fs->CreateString(_SC("?:"));
 			Lex();
 			_fs->AddInstruction(_OP_JZ, _fs->PopTarget());
@@ -657,7 +640,7 @@ public:
 			_fs->SetIntructionParam(jmppos, 1, _fs->GetCurrentPos() - jmppos);
 			_fs->SetIntructionParam(jzpos, 1, endfirstexp - jzpos + 1);
 			_fs->SnoozeOpt();
-			END_AST_NODE;
+			END_AST_NODE();
 			}
 			break;
 		}
@@ -665,7 +648,7 @@ public:
 	}
 	template<typename T> void BIN_EXP(SQOpcode op, T f,SQInteger op3 = 0)
 	{
-		BEGIN_AST_NODE_PREFIX(SQAstNode_BinaryExpr);
+		BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
 		const SQChar* optoken;
 		if(op == _OP_BITW)
 		{
@@ -684,13 +667,13 @@ public:
 		Lex(); (this->*f)();
 		SQInteger op1 = _fs->PopTarget();SQInteger op2 = _fs->PopTarget();
 		_fs->AddInstruction(op, _fs->PushTarget(), op1, op2, op3);
-		END_AST_NODE;
+		END_AST_NODE();
 	}
 	void LogicalOrExp()
 	{
 		LogicalAndExp();
 		for(;;) if(_token == TK_OR) {
-			BEGIN_AST_NODE_PREFIX(SQAstNode_BinaryExpr);
+			BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
 			_currastnode->_identifier = _fs->CreateString(_SC("||"));
 			SQInteger first_exp = _fs->PopTarget();
 			SQInteger trg = _fs->PushTarget();
@@ -703,7 +686,7 @@ public:
 			if(trg != second_exp) _fs->AddInstruction(_OP_MOVE, trg, second_exp);
 			_fs->SnoozeOpt();
 			_fs->SetIntructionParam(jpos, 1, (_fs->GetCurrentPos() - jpos));
-			END_AST_NODE;
+			END_AST_NODE();
 			break;
 		}else return;
 	}
@@ -712,7 +695,7 @@ public:
 		BitwiseOrExp();
 		for(;;) switch(_token) {
 		case TK_AND: {
-			BEGIN_AST_NODE_PREFIX(SQAstNode_BinaryExpr);
+			BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
 			_currastnode->_identifier = _fs->CreateString(_SC("&&"));
 			SQInteger first_exp = _fs->PopTarget();
 			SQInteger trg = _fs->PushTarget();
@@ -725,7 +708,7 @@ public:
 			if(trg != second_exp) _fs->AddInstruction(_OP_MOVE, trg, second_exp);
 			_fs->SnoozeOpt();
 			_fs->SetIntructionParam(jpos, 1, (_fs->GetCurrentPos() - jpos));
-			END_AST_NODE;
+			END_AST_NODE();
 			break;
 			}
 		case TK_IN:
@@ -844,10 +827,8 @@ public:
 	//if 'pos' != -1 the previous variable is a local variable
 	void PrefixedExpr()
 	{
-		//_currastnode = SQAstNodeFactory::CreateAstNode<TYPE>(_currastnode);
-		//_currastnode->_startline = _lex._lasttokenline;
-		//_currastnode->_startcol = _lex._lasttokencolumn;
-		//TYPE* _currastnodeex = (TYPE*)_currastnode;
+		SQObject idf;
+
 		SQInteger pos = Factor();
 		for(;;) {
 			switch(_token) {
@@ -855,12 +836,12 @@ public:
 				pos = -1;
 				Lex();
 
-				BEGIN_AST_NODE_PREFIX(SQAstNode_Expr);
-				_currastnodeex->_identifier = _fs->CreateString(_SC("."));
-				SQObject idf = Expect(TK_IDENTIFIER);
-				BEGIN_AST_NODE(SQAstNode_Constant);
-				_currastnodeex->_identifier = idf;
-				END_AST_NODE;
+				BEGIN_AST_NODE_PREFIX<SQAstNode_Expr>();
+				_currastnode->_identifier = _fs->CreateString(_SC("."));
+				idf = Expect(TK_IDENTIFIER);
+				BEGIN_AST_NODE<SQAstNode_Constant>();
+				_currastnode->_identifier = idf;
+				END_AST_NODE();
 				_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(idf));
 				if(_es.etype==BASE) {
 					Emit2ArgsOP(_OP_GET);
@@ -875,7 +856,7 @@ public:
 					_es.etype = OBJECT;
 				}
 
-				END_AST_NODE;
+				END_AST_NODE();
 				break;
 			case _SC('['):
 				if(_lex._prevtoken == _SC('\n')) Error(_SC("cannot brake deref/or comma needed after [exp]=exp slot declaration"));
@@ -925,7 +906,7 @@ public:
 				return;
 				break;	
 			case _SC('('): 
-				BEGIN_AST_NODE_PREFIX(SQAstNode_Call);
+				BEGIN_AST_NODE_PREFIX<SQAstNode_Call>();
 				switch(_es.etype) {
 					case OBJECT: {
 						SQInteger key     = _fs->PopTarget();  /* location of the key */
@@ -953,7 +934,7 @@ public:
 				_es.etype = EXPR;
 				Lex();
 				FunctionCallArgs();
-				END_AST_NODE;
+				END_AST_NODE();
 				break;
 			default: return;
 			}
@@ -967,120 +948,144 @@ public:
 		switch(_token)
 		{
 		case TK_STRING_LITERAL:
-			BEGIN_AST_NODE(SQAstNode_Constant);
+			BEGIN_AST_NODE<SQAstNode_Constant>();
 			value = _fs->CreateString(_lex._svalue,_lex._longstr.size()-1);
 			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(value));
 			Lex(); 
 			_currastnode->_identifier = value;
-			END_AST_NODE;
+			END_AST_NODE();
 			break;
 		case TK_BASE:
-			BEGIN_AST_NODE(SQAstNode_Var);
+			BEGIN_AST_NODE<SQAstNode_Var>();
 			Lex();
 			_currastnode->_identifier = _fs->CreateString(_SC(".base"));
 			_fs->AddInstruction(_OP_GETBASE, _fs->PushTarget());
 			_es.etype  = BASE;
 			_es.epos   = _fs->TopTarget();
-			END_AST_NODE;
+			END_AST_NODE();
 			return (_es.epos);
 			break;
 		case TK_IDENTIFIER:
 		case TK_CONSTRUCTOR:
 		case TK_THIS:{
-				BEGIN_AST_NODE(SQAstNode_Var);
 
+				SQObjectPtr astnodeid;
 				SQObject id;
 				SQObject constant;
 
 				switch(_token) {
 					case TK_IDENTIFIER:
 						id = _fs->CreateString(_lex._svalue);      
-						_currastnode->_identifier = id;
+						astnodeid = id;
 						break;
 					case TK_THIS:        
 						id = _fs->CreateString(_SC("this"));        
-						_currastnode->_identifier = _fs->CreateString(_SC(".this"));
+						astnodeid = _fs->CreateString(_SC(".this"));
 						break;
 					case TK_CONSTRUCTOR:
 						id = _fs->CreateString(_SC("constructor")); 
-						_currastnode->_identifier = _fs->CreateString(_SC(".ctor"));
+						astnodeid = _fs->CreateString(_SC(".ctor"));
 						break;
 				}
 
+				SQInteger lasttoken = _token;
+
 				SQInteger pos = -1;
 				Lex();
-				if((pos = _fs->GetLocalVariable(id)) != -1) {
-					/* Handle a local variable (includes 'this') */
-					_fs->PushTarget(pos);
-					_es.etype  = LOCAL;
-					_es.epos   = pos;
-				}
 
-				else if((pos = _fs->GetOuterVariable(id)) != -1) {
-					/* Handle a free var */
-					if(NeedGet()) {
-						_es.epos  = _fs->PushTarget();
-						_fs->AddInstruction(_OP_GETOUTER, _es.epos, pos);	
-						/* _es.etype = EXPR; already default value */
-					}
-					else {
-						_es.etype = OUTER;
-						_es.epos  = pos;
-					}
+				if(lasttoken == TK_IDENTIFIER && _token == TK_IDENTIFIER)
+				{
+					//FIXME: Need a local here.
+					//id = _fs->CreateString(_lex._svalue);      
+					//_currastnode->_identifier = id;
+					LocalDeclStatement(true);
+					_fs->PushTarget();
 				}
+				else
+				{
+					bool bNeedEndAstNode = false;
+					if(_currastnode->GetNodeType() != SQAST_Class)
+					{
+						BEGIN_AST_NODE<SQAstNode_Var>();
+						_currastnode->_identifier = astnodeid;
+						bNeedEndAstNode = true;
+					}
+					if((pos = _fs->GetLocalVariable(id)) != -1) {
+						/* Handle a local variable (includes 'this') */
+						_fs->PushTarget(pos);
+						_es.etype  = LOCAL;
+						_es.epos   = pos;
+					}
 
-				else if(_fs->IsConstant(id, constant)) {
-					/* Handle named constant */
-					SQObjectPtr constval;
-					SQObject    constid;
-					if(sqobjtype(constant) == OT_TABLE) {
-						Expect('.');
-						constid = Expect(TK_IDENTIFIER);
-						if(!_table(constant)->Get(constid, constval)) {
-							constval.Null();
-							Error(_SC("invalid constant [%s.%s]"), _stringval(id), _stringval(constid));
+					else if((pos = _fs->GetOuterVariable(id)) != -1) {
+						/* Handle a free var */
+						if(NeedGet()) {
+							_es.epos  = _fs->PushTarget();
+							_fs->AddInstruction(_OP_GETOUTER, _es.epos, pos);	
+							/* _es.etype = EXPR; already default value */
+						}
+						else {
+							_es.etype = OUTER;
+							_es.epos  = pos;
 						}
 					}
-					else {
-						constval = constant;
-					}
-					_es.epos = _fs->PushTarget();
 
-					/* generate direct or literal function depending on size */
-					SQObjectType ctype = sqobjtype(constval);
-					switch(ctype) {
-						case OT_INTEGER: EmitLoadConstInt(_integer(constval),_es.epos); break;
-						case OT_FLOAT: EmitLoadConstFloat(_float(constval),_es.epos); break;
-						default: _fs->AddInstruction(_OP_LOAD,_es.epos,_fs->GetConstant(constval)); break;
+					else if(_fs->IsConstant(id, constant)) {
+						/* Handle named constant */
+						SQObjectPtr constval;
+						SQObject    constid;
+						if(sqobjtype(constant) == OT_TABLE) {
+							Expect('.');
+							constid = Expect(TK_IDENTIFIER);
+							if(!_table(constant)->Get(constid, constval)) {
+								constval.Null();
+								Error(_SC("invalid constant [%s.%s]"), _stringval(id), _stringval(constid));
+							}
+						}
+						else {
+							constval = constant;
+						}
+						_es.epos = _fs->PushTarget();
+
+						/* generate direct or literal function depending on size */
+						SQObjectType ctype = sqobjtype(constval);
+						switch(ctype) {
+							case OT_INTEGER: EmitLoadConstInt(_integer(constval),_es.epos); break;
+							case OT_FLOAT: EmitLoadConstFloat(_float(constval),_es.epos); break;
+							default: _fs->AddInstruction(_OP_LOAD,_es.epos,_fs->GetConstant(constval)); break;
+						}
+						_es.etype = EXPR;
 					}
-					_es.etype = EXPR;
-				}
-				else {
-					/* Handle a non-local variable, aka a field. Push the 'this' pointer on
-					* the virtual stack (always found in offset 0, so no instruction needs to
-					* be generated), and push the key next. Generate an _OP_LOAD instruction
-					* for the latter. If we are not using the variable as a dref expr, generate
-					* the _OP_GET instruction.
-					*/
-					_fs->PushTarget(0);
-					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(id));
-					if(NeedGet()) {
-						Emit2ArgsOP(_OP_GET);
+					else {
+						/* Handle a non-local variable, aka a field. Push the 'this' pointer on
+						* the virtual stack (always found in offset 0, so no instruction needs to
+						* be generated), and push the key next. Generate an _OP_LOAD instruction
+						* for the latter. If we are not using the variable as a dref expr, generate
+						* the _OP_GET instruction.
+						*/
+						_fs->PushTarget(0);
+						_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(id));
+						if(NeedGet()) {
+							Emit2ArgsOP(_OP_GET);
+						}
+						_es.etype = OBJECT;
 					}
-					_es.etype = OBJECT;
+					if(bNeedEndAstNode)
+					{
+						END_AST_NODE();
+					}
 				}
-				END_AST_NODE;
 				return _es.epos;
 			}
 			break;
 		case TK_DOUBLE_COLON:  // "::"
-			BEGIN_AST_NODE(SQAstNode_Constant);
-			_currastnodeex->_identifier = _fs->CreateString(_SC(".root"));
+			BEGIN_AST_NODE<SQAstNode_Constant>();
+			_currastnode->_identifier = _fs->CreateString(_SC(".root"));
 			_fs->AddInstruction(_OP_LOADROOT, _fs->PushTarget());
 			_es.etype = OBJECT;
 			_token = _SC('.'); /* hack: drop into PrefixExpr, case '.'*/
 			_es.epos = -1;
-			END_AST_NODE;
+			END_AST_NODE();
 			return _es.epos;
 			break;
 		case TK_NULL: 
@@ -1090,12 +1095,14 @@ public:
 		case TK_INTEGER: EmitLoadConstInt(_lex._nvalue,-1); Lex();	break;
 		case TK_FLOAT: EmitLoadConstFloat(_lex._fvalue,-1); Lex(); break;
 		case TK_TRUE: case TK_FALSE:
-			BEGIN_AST_NODE(SQAstNode_Constant);
-			_currastnodeex->_identifier = _token == TK_TRUE ? true : false;
-			_currastnodeex->_constanttype = SQAstNode_Constant::CT_Boolean;
-			_fs->AddInstruction(_OP_LOADBOOL, _fs->PushTarget(),_token == TK_TRUE?1:0);
-			Lex();
-			END_AST_NODE;
+			{
+				SQAstNode_Constant* _currastnodeex = BEGIN_AST_NODE<SQAstNode_Constant>();
+				_currastnode->_identifier = _token == TK_TRUE ? true : false;
+				_currastnodeex->_constanttype = SQAstNode_Constant::CT_Boolean;
+				_fs->AddInstruction(_OP_LOADBOOL, _fs->PushTarget(),_token == TK_TRUE?1:0);
+				Lex();
+				END_AST_NODE();
+			}
 			break;
 		case _SC('['): {
 				_fs->AddInstruction(_OP_NEWOBJ, _fs->PushTarget(),0,0,NOT_ARRAY);
@@ -1149,7 +1156,7 @@ public:
 	}
 	void EmitLoadConstInt(SQInteger value,SQInteger target)
 	{
-		BEGIN_AST_NODE(SQAstNode_Constant);
+		BEGIN_AST_NODE<SQAstNode_Constant>();
 		if(target < 0) {
 			target = _fs->PushTarget();
 		}
@@ -1159,12 +1166,12 @@ public:
 		else {
 			_fs->AddInstruction(_OP_LOAD, target, _fs->GetNumericConstant(value));
 		}
-		_currastnodeex->_identifier = value;
-		END_AST_NODE;
+		_currastnode->_identifier = value;
+		END_AST_NODE();
 	}
 	void EmitLoadConstFloat(SQFloat value,SQInteger target)
 	{
-		BEGIN_AST_NODE(SQAstNode_Constant);
+		BEGIN_AST_NODE<SQAstNode_Constant>();
 		if(target < 0) {
 			target = _fs->PushTarget();
 		}
@@ -1174,17 +1181,17 @@ public:
 		else {
 			_fs->AddInstruction(_OP_LOAD, target, _fs->GetNumericConstant(value));
 		}
-		_currastnodeex->_identifier = value;
-		END_AST_NODE;
+		_currastnode->_identifier = value;
+		END_AST_NODE();
 	}
 	void UnaryOP(SQOpcode op)
 	{
-		BEGIN_AST_NODE(SQAstNode_UnaryExpr);
+		BEGIN_AST_NODE<SQAstNode_UnaryExpr>();
 		_currastnode->_identifier = _fs->CreateString(s_OpCodeTokens[op]);
 		PrefixedExpr();
 		SQInteger src = _fs->PopTarget();
 		_fs->AddInstruction(op, _fs->PushTarget(), src);
-		END_AST_NODE;
+		END_AST_NODE();
 	}
 	bool NeedGet()
 	{
@@ -1228,22 +1235,22 @@ public:
 			SQObjectPtr targetsymbolname;
 
 
-			BEGIN_AST_NODE(SQAstNode_Member);
+			BEGIN_AST_NODE<SQAstNode_Member>();
 
 			//check if is an attribute
 			if(separator == ';')
 			{
 				if(_token == TK_ATTR_OPEN)
 				{
-					BEGIN_AST_NODE(SQAstNode_Table);
-					_currastnodeex->_identifier = _fs->CreateString(_SC(".attr"));
+					BEGIN_AST_NODE<SQAstNode_Table>();
+					_currastnode->_identifier = _fs->CreateString(_SC(".attr"));
 					
 					_fs->AddInstruction(_OP_NEWOBJ, _fs->PushTarget(),0,NOT_TABLE);
 					Lex();
 					ParseTableOrClass(',',TK_ATTR_CLOSE);
 					hasattrs = true;
 
-					END_AST_NODE;
+					END_AST_NODE();
 				}
 				if(_token == TK_STATIC)
 				{
@@ -1318,6 +1325,13 @@ public:
 			default :
 				{
 					targetsymbolname = Expect(TK_IDENTIFIER);
+					SQObject typeName;
+					if(_token == TK_IDENTIFIER)
+					{
+						typeName = targetsymbolname;
+						targetsymbolname = Expect(TK_IDENTIFIER);
+					}
+
 					_currastnode->_identifier = targetsymbolname;
 					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(targetsymbolname));
 					Expect(_SC('='));
@@ -1358,7 +1372,7 @@ public:
 				}
 			}
 
-			END_AST_NODE;
+			END_AST_NODE();
 		}
 		if(separator == _SC(',')) //hack recognizes a table from the separator
 		{
@@ -1366,12 +1380,15 @@ public:
 		}
 		Lex();
 	}
-	void LocalDeclStatement()
+	void LocalDeclStatement(bool hasTypePrefix = false)
 	{
 		SQObject varname;
-		Lex();
+		if(!hasTypePrefix)
+		{
+			Lex();
+		}
 		if( _token == TK_FUNCTION) {
-			BEGIN_AST_NODE(SQAstNode_Local);
+			BEGIN_AST_NODE<SQAstNode_Local>();
 			
 			Lex();
 			varname = Expect(TK_IDENTIFIER);
@@ -1381,13 +1398,13 @@ public:
 			_fs->PopTarget();
 			_fs->PushLocalVariable(varname);
 			
-			_currastnodeex->_identifier = varname;
-			END_AST_NODE;
+			_currastnode->_identifier = varname;
+			END_AST_NODE();
 			return;
 		}
 
 		do {
-			BEGIN_AST_NODE(SQAstNode_Local);
+			BEGIN_AST_NODE<SQAstNode_Local>();
 			varname = Expect(TK_IDENTIFIER);
 			if(_token == _SC('=')) {
 				Lex(); Expression();
@@ -1401,8 +1418,8 @@ public:
 			_fs->PopTarget();
 			_fs->PushLocalVariable(varname);
 
-			_currastnodeex->_identifier = varname;
-			END_AST_NODE;
+			_currastnode->_identifier = varname;
+			END_AST_NODE();
 			if(_token == _SC(',')) Lex(); else break;
 		} while(1);
 
@@ -1623,14 +1640,14 @@ public:
 	}
 	void ClassStatement()
 	{
-		BEGIN_AST_NODE(SQAstNode_Class);
+		BEGIN_AST_NODE<SQAstNode_Class>();
 
 		SQExpState es;
 		Lex();
 		es = _es;
 		_es.donot_get = true;
 
-		_currastnodeex->_identifier = SQString::Create(_ss(_vm), _lex._svalue);
+		_currastnode->_identifier = SQString::Create(_ss(_vm), _lex._svalue);
 
 		PrefixedExpr();
 		if(_es.etype == EXPR) {
@@ -1646,7 +1663,7 @@ public:
 		}
 		_es = es;
 
-		END_AST_NODE;
+		END_AST_NODE();
 	}
 	SQObject ExpectScalar()
 	{
@@ -1817,40 +1834,40 @@ public:
 	}
 	void CreateFunction(SQObject &name,bool lambda = false)
 	{
-		BEGIN_AST_NODE(SQAstNode_FunctionDef);
-		SQAstNode_FunctionDef* funcnode = _currastnodeex;
+		SQAstNode_FunctionDef* funcastnode = BEGIN_AST_NODE<SQAstNode_FunctionDef>();
 
-		_currastnodeex->_identifier = name;
+		_currastnode->_identifier = name;
 		SQFuncState *funcstate = _fs->PushChildState(_ss(_vm));
 		funcstate->_name = name;
 		SQObject paramname;
-		BEGIN_AST_NODE(SQAstNode_FunctionParam);
-		_currastnodeex->_identifier = _fs->CreateString(_SC("this"));
-		funcnode->_params.push_back(_currastnodeex);
+		SQAstNode_FunctionParam* paramnode = BEGIN_AST_NODE<SQAstNode_FunctionParam>();
+		_currastnode->_identifier = _fs->CreateString(_SC("this"));
+		funcastnode->_params.push_back(paramnode);
 		funcstate->AddParameter(_fs->CreateString(_SC("this")));
-		END_AST_NODE;
+		END_AST_NODE();
 		funcstate->_sourcename = _sourcename;
 		SQInteger defparams = 0;
-		while(_token!=_SC(')')) {
+		while(_token!=_SC(')'))
+		{
 			if(_token == TK_VARPARAMS) {
 				if(defparams > 0) Error(_SC("function with default parameters cannot have variable number of parameters"));
-				BEGIN_AST_NODE(SQAstNode_FunctionParam);
-				_currastnodeex->_identifier = _fs->CreateString(_SC("vargv"));
-				funcnode->_params.push_back(_currastnodeex);
+				paramnode = BEGIN_AST_NODE<SQAstNode_FunctionParam>();
+				_currastnode->_identifier = _fs->CreateString(_SC("vargv"));
+				funcastnode->_params.push_back(paramnode);
 				funcstate->AddParameter(_fs->CreateString(_SC("vargv")));
 				funcstate->_varparams = true;
-				END_AST_NODE;
+				END_AST_NODE();
 				Lex();
 				if(_token != _SC(')')) Error(_SC("expected ')'"));
 				break;
 			}
 			else {
 				paramname = Expect(TK_IDENTIFIER);
-				BEGIN_AST_NODE(SQAstNode_FunctionParam);
-				_currastnodeex->_identifier = paramname;
-				funcnode->_params.push_back(_currastnodeex);
+				paramnode = BEGIN_AST_NODE<SQAstNode_FunctionParam>();
+				_currastnode->_identifier = paramname;
+				funcastnode->_params.push_back(paramnode);
 				funcstate->AddParameter(paramname);
-				END_AST_NODE;
+				END_AST_NODE();
 				if(_token == _SC('=')) { 
 					Lex();
 					Expression();
@@ -1888,7 +1905,7 @@ public:
 		_fs = currchunk;
 		_fs->_functions.push_back(func);
 		_fs->PopChildState();
-		END_AST_NODE;
+		END_AST_NODE();
 	}
 	void ResolveBreaks(SQFuncState *funcstate, SQInteger ntoresolve)
 	{
@@ -1910,6 +1927,36 @@ public:
 			ntoresolve--;
 		}
 	}
+private:
+	template<class TYPE>
+	inline TYPE* BEGIN_AST_NODE()
+	{
+		TYPE* ret = SQAstNodeFactory::CreateAstNode<TYPE>(_currastnode);
+		_currastnode = ret;
+		_currastnode->_startline = _lex._lasttokenline;
+		_currastnode->_startcol = _lex._lasttokencolumn;
+		return ret;
+	}
+
+	template<class TYPE>
+	inline TYPE* BEGIN_AST_NODE_PREFIX()
+	{
+		SQAstNode* _lastastnode = _currastnode->_commonchildren.size() > 0 ? _currastnode->_commonchildren[_currastnode->_commonchildren.size() - 1] : NULL;
+		TYPE* ret = SQAstNodeFactory::CreateAstNode<TYPE>(_lastastnode == NULL ? NULL : _lastastnode->_parent);
+		_currastnode = ret;
+		if(_lastastnode != NULL) _lastastnode->SetParent(_currastnode);
+		_currastnode->_startline = _lex._lasttokenline;
+		_currastnode->_startcol = _lex._lasttokencolumn;
+		return ret;
+	}
+
+	inline void END_AST_NODE()
+	{
+		_currastnode->_endline = _lex._lasttokenline;
+		_currastnode->_endcol = _lex._lasttokencolumn;
+		_currastnode = _currastnode->_parent; 
+	}
+
 private:
 	SQInteger _token;
 	SQFuncState *_fs;
