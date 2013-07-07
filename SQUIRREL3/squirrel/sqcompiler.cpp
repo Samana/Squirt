@@ -509,9 +509,16 @@ public:
 			}
 			break;
 		default:
-			CommaExpr();
-			_fs->DiscardTarget();
-			//_fs->PopTarget();
+			if(_token >= TK_DYNAMIC_T && _token <= TK_NATIVEPTR_T)
+			{
+				LocalDeclStatement();
+			}
+			else
+			{
+				CommaExpr();
+				_fs->DiscardTarget();
+				//_fs->PopTarget();
+			}
 			break;
 		}
 		_fs->SnoozeOpt();

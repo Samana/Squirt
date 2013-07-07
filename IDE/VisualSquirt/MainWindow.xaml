@@ -34,6 +34,13 @@
                 <MenuItem Header="Exit"/>
             </MenuItem>
             <MenuItem Header="EDIT"/>
+            <MenuItem Header="VIEW"/>
+            <MenuItem Header="PROJECT"/>
+            <MenuItem Header="BUILD"/>
+            <MenuItem Header="DEBUG"/>
+            <MenuItem Header="TOOLS"/>
+            <MenuItem Header="WINDOW"/>
+            <MenuItem Header="HELP"/>
         </Menu>
         <ToolBarTray HorizontalAlignment="Stretch" Height="Auto" Grid.Row="1" VerticalAlignment="Top">
             <ToolBar>
