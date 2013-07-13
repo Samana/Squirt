@@ -1370,7 +1370,7 @@ public:
 
 				if(hastype)
 				{
-					std::basic_string<SQChar> buf;
+					std::scstring buf;
 					SQ_CMPL_LOG(_SC("symbol '%s' : '%s'\n"),
 						_string(targetsymbolname)->_val,
 						typedesc.ToString(buf));

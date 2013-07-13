@@ -2,12 +2,14 @@
 
 #pragma once
 
-#include "squirrel.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
 #include <tchar.h>
 #include <vector>
+
+#include "squirrel.h"
+#include "../squirrel/squirt.h"
 
 using namespace System;
 
@@ -190,12 +192,12 @@ namespace sqnet {
 
 		bool compilestatic( array<String^>^ arrSrc, String^ projName, bool bRaiseError )
 		{
-			std::vector<std::basic_string<SQChar>> vecSrc(arrSrc->Length);
+			std::vector<std::scstring> vecSrc(arrSrc->Length);
 			std::vector<const SQChar*> vecSrcPtr(arrSrc->Length);
 			for(int i=0; i<arrSrc->Length; i++)
 			{
 				StringToNative ntstr(arrSrc[i]);
-				vecSrc[i] = std::basic_string<SQChar>(ntstr.Value());
+				vecSrc[i] = std::scstring(ntstr.Value());
 				vecSrcPtr[i] = vecSrc[i].c_str();
 			}
 			StringToNative ntProjName(projName);

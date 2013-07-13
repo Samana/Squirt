@@ -68,7 +68,7 @@ struct SQTypeDesc
 		assert(sq_isstring(typeName));
 	}
 
-	const SQChar* ToString(std::basic_string<SQChar>& buf) const;
+	const SQChar* ToString(std::scstring& buf) const;
 };
 
 struct SQType //: public CHAINABLE_OBJ

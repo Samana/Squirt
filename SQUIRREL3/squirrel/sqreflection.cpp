@@ -35,7 +35,7 @@ const SQChar* SQTypeDesc::GetMetaTypeLiterals(SQMetaType metaType)
 	return literals[metaType];
 }
 
-const SQChar* SQTypeDesc::ToString(std::basic_string<SQChar>& buf) const
+const SQChar* SQTypeDesc::ToString(std::scstring& buf) const
 {
 	if(_resolved)
 	{

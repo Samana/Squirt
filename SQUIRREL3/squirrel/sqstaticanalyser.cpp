@@ -132,7 +132,7 @@ void SQAstNode_FunctionDef::GetSignatureString(std::scstring& signature) const
 	//FIXME: Potential inf loop if function param has the same function type?
 	std::basic_stringstream<SQChar> stream;
 	stream << _SC("function ( ");
-	std::basic_string<SQChar> buf;
+	std::scstring buf;
 	for(SQUnsignedInteger i=0; i<_params.size(); i++)
 	{
 		stream << _params[i]->_typetag.ToString(buf);
