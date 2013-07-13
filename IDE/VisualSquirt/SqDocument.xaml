@@ -7,7 +7,13 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Loaded="UserControl_Loaded">
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="20"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Canvas x:Name="BreakPointViewer" Background="#FFEEEEEE"/>
         <avalonedit:TextEditor
+            Grid.Column="1"
             x:Name="m_TextEdit"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"

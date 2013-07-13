@@ -1,6 +1,8 @@
 #ifndef __SQSTATICANALYSER_H__
 #define __SQSTATICANALYSER_H__
 
+#include "squirt.h"
+
 struct SQAstNode;
 struct SQAstNode_Namespace;
 struct SQAstNode_Class;
@@ -23,10 +25,10 @@ enum SQAstNodeType
 	SQAST_CondEvalExpr,
 	SQAST_Var,
 	SQAST_Statement,
-	SQAST_Variable,
-	SQAST_Member,
-	SQAST_Local,
-	SQAST_FunctionParam,
+	SQAST_DeclVariable,
+	SQAST_DeclMember,
+	SQAST_DeclLocal,
+	SQAST_DeclFunctionParam,
 	SQAST_FunctionDef,
 	SQAST_Call,
 	SQAST_If,
@@ -45,10 +47,12 @@ const SQChar* GetStringFromAstNodeType(SQAstNodeType type);
 
 #define AST_NODE_TYPE( X ) virtual SQAstNodeType GetNodeType() const { return X; }
 
+#define SQ_AST_NO_COPY(X)	private: X(const X&); X& operator=(const X&);
+
 struct SQAstNode {
 	SQAstNode* _parent;
 	SQObjectPtr _identifier;
-	SQObjectPtr _datatype;
+	SQTypeDesc _typetag;
 	SQInteger _startline;
 	SQInteger _startcol;
 	SQInteger _endline;
@@ -71,6 +75,20 @@ struct SQAstNode {
 		{
 			delete _commonchildren[i];
 		}
+	}
+
+	virtual SQAstNode* FindParent(SQAstNodeType type)
+	{
+		SQAstNode* pParent = _parent;
+		while(pParent)
+		{
+			if(pParent->GetNodeType() == type)
+			{
+				return pParent;
+			}
+			pParent = pParent->_parent;
+		}
+		return NULL;
 	}
 
 	virtual SQAstNodeType GetNodeType() const { return SQAST_NODE; }
@@ -107,10 +125,20 @@ struct SQAstNode {
 		return true;
 	}
 
-	virtual bool CollectTypeInfo()
+	virtual bool CollectDefinedTypes(SQTable* pTypeTable, const std::scstring& namePrefix);
+	virtual bool DecorateWithTypeInfo(SQAssembly* pAssembly)
 	{
+		for(SQUnsignedInteger i=0; i<_commonchildren.size(); i++)
+		{
+			if(!_commonchildren[i]->DecorateWithTypeInfo(pAssembly))
+			{
+				return false;
+			}
+		}
 		return true;
 	}
+
+	SQ_AST_NO_COPY(SQAstNode);
 };
 
 struct SQAstNode_Using : public SQAstNode {
@@ -128,6 +156,8 @@ struct SQAstNode_NamespaceBase : public SQAstNode {
 	virtual bool AddNamespace(SQAstNode_Namespace* pns);
 	virtual bool AddClass(SQAstNode_Class* pcl);
 
+	virtual bool CollectDefinedTypes(SQTable* pTypeTable, const std::scstring& namePrefix);
+
 	sqvector<SQAstNode_Class*> _classes;
 	sqvector<SQAstNode_Namespace*> _namespaces;
 };
@@ -144,14 +174,14 @@ struct SQAstNode_Namespace : public SQAstNode_NamespaceBase {
 	virtual ~SQAstNode_Namespace() { }
 };
 
-struct SQAstNode_Table : public SQAstNode {
-	AST_NODE_TYPE(SQAST_Table);
-};
-
-struct SQAstNode_Class : public SQAstNode {
+struct SQAstNode_Class : public SQAstNode_NamespaceBase {
 	AST_NODE_TYPE(SQAST_Class);
 	SQAstNode_Class() { }
 	virtual ~SQAstNode_Class() { }
+};
+
+struct SQAstNode_Table : public SQAstNode {
+	AST_NODE_TYPE(SQAST_Table);
 };
 
 struct SQAstNode_CodeBlock : public SQAstNode {
@@ -191,61 +221,55 @@ struct SQAstNode_Statement : public SQAstNode {
 };
 
 struct SQAstNode_Constant : public SQAstNode_Expr {
-
-	enum ConstantType {
-		CT_Boolean,
-		CT_Integer,
-		CT_Float,
-		CT_String,
-	};
-
-	ConstantType _constanttype;
-
 	AST_NODE_TYPE(SQAST_Constant);
 	virtual ~SQAstNode_Constant() { }
+
+	virtual bool DecorateWithTypeInfo(SQAssembly* pAssembly);
 };
 
 struct SQAstNode_Var : public SQAstNode_Expr {
 	AST_NODE_TYPE(SQAST_Var);
 	virtual ~SQAstNode_Var() { }
+
+	virtual bool DecorateWithTypeInfo(SQAssembly* pAssembly);
 };
 
-struct SQAstNode_Variable : public SQAstNode_Statement {
-	AST_NODE_TYPE(SQAST_Variable);
-	virtual ~SQAstNode_Variable() { }
+struct SQAstNode_DeclVariable : public SQAstNode_Statement {
+	AST_NODE_TYPE(SQAST_DeclVariable);
+	virtual ~SQAstNode_DeclVariable() { }
 
 	SQAstNode_Expr* _initializer;
 };
 
-struct SQAstNode_Member : public SQAstNode_Variable {
-	AST_NODE_TYPE(SQAST_Member);
-	virtual ~SQAstNode_Member() { }
+struct SQAstNode_DeclMember : public SQAstNode_DeclVariable {
+	AST_NODE_TYPE(SQAST_DeclMember);
+	SQAstNode_DeclMember() : _attributes(NULL), _isstatic(false) { }
+	virtual ~SQAstNode_DeclMember() { }
 	SQAstNode_Table* _attributes;
+	bool _isstatic;
 };
 
-struct SQAstNode_Local : public SQAstNode_Variable {
-	AST_NODE_TYPE(SQAST_Local);
-	virtual ~SQAstNode_Local() { }
+struct SQAstNode_DeclLocal : public SQAstNode_DeclVariable {
+	AST_NODE_TYPE(SQAST_DeclLocal);
+	virtual ~SQAstNode_DeclLocal() { }
 };
 
-struct SQAstNode_FunctionParam : public SQAstNode_Local {
-	AST_NODE_TYPE(SQAST_FunctionParam);
-	virtual ~SQAstNode_FunctionParam() { }
+struct SQAstNode_DeclFunctionParam : public SQAstNode_DeclLocal {
+	AST_NODE_TYPE(SQAST_DeclFunctionParam);
+	virtual ~SQAstNode_DeclFunctionParam() { }
 };
 
 struct SQAstNode_FunctionDef : public SQAstNode_Expr {
 	AST_NODE_TYPE(SQAST_FunctionDef);
+	SQAstNode_FunctionDef() { _typetag = SQTypeDesc(SQ_TYPE_CLOSURE); }
 	virtual ~SQAstNode_FunctionDef() { }
 
-	sqvector<SQAstNode_Local*> _params;
+	virtual void GetSignatureString(std::scstring& signature) const;
+
+	SQTypeDesc _returntype;
+	sqvector<SQAstNode_DeclLocal*> _params;
 	SQAstNode_CodeBlock* _body;
 };
-
-//struct SQAstNode_PrefixedExpr : public SQAstNode_Expr {
-//	AST_NODE_TYPE(SQAST_PrefixedExpr);
-//	virtual ~SQAstNode_PrefixedExpr() { }
-//
-//};
 
 struct SQAstNode_Call : public SQAstNode_Expr {
 	AST_NODE_TYPE(SQAST_Call);

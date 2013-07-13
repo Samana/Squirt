@@ -164,7 +164,7 @@ const SQChar* s_CmpToken[] =
 class SQCompiler
 {
 public:
-	SQCompiler(SQVM *v, SQLEXREADFUNC rg, SQUserPointer up, const SQChar* sourcename, bool raiseerror, bool lineinfo)
+	SQCompiler(SQVM *v, SQLEXREADFUNC rg, SQUserPointer up, const SQChar* sourcename, bool raiseerror, bool lineinfo, SQAstNode_Document* pOutAst)
 	{
 		_vm=v;
 		_lex.Init(_ss(v), rg, up,ThrowError,this);
@@ -172,15 +172,11 @@ public:
 		_lineinfo = lineinfo;_raiseerror = raiseerror;
 		_scope.outers = 0;
 		_scope.stacksize = 0;
-		_astroot = NULL;
+		_astroot = pOutAst;
 		compilererror = NULL;
 	}
 	~SQCompiler()
 	{
-		if(_astroot)
-		{
-			delete _astroot;
-		}
 	}
 	static void ThrowError(void *ud, const SQChar *s) {
 		SQCompiler *c = (SQCompiler *)ud;
@@ -281,7 +277,6 @@ public:
 		_fs->_sourcename = _sourcename;
 		SQInteger stacksize = _fs->GetStackSize();
 		if(setjmp(_errorjmp) == 0) {
-			_astroot = new SQAstNode_Document();
 			_astroot->_identifier = _sourcename;
 			_currastnode = _astroot;
 			Lex();
@@ -653,10 +648,12 @@ public:
 		if(op == _OP_BITW)
 		{
 			optoken = s_BWOpToken[op3];
+			_currastnode->_typetag = SQ_TYPE_INT_ANY;
 		}
 		else if(op == _OP_CMP)
 		{
 			optoken = s_CmpToken[op3];
+			_currastnode->_typetag = SQ_TYPE_BOOLEAN;
 		}
 		else
 		{
@@ -697,6 +694,7 @@ public:
 		case TK_AND: {
 			BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
 			_currastnode->_identifier = _fs->CreateString(_SC("&&"));
+			_currastnode->_typetag = SQ_TYPE_BOOLEAN;
 			SQInteger first_exp = _fs->PopTarget();
 			SQInteger trg = _fs->PushTarget();
 			_fs->AddInstruction(_OP_AND, trg, 0, first_exp, 0);
@@ -953,6 +951,7 @@ public:
 			_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(value));
 			Lex(); 
 			_currastnode->_identifier = value;
+			_currastnode->_typetag = SQTypeDesc(SQ_TYPE_STRING);
 			END_AST_NODE();
 			break;
 		case TK_BASE:
@@ -1098,7 +1097,7 @@ public:
 			{
 				SQAstNode_Constant* _currastnodeex = BEGIN_AST_NODE<SQAstNode_Constant>();
 				_currastnode->_identifier = _token == TK_TRUE ? true : false;
-				_currastnodeex->_constanttype = SQAstNode_Constant::CT_Boolean;
+				_currastnodeex->_typetag = SQTypeDesc(SQ_TYPE_BOOLEAN);
 				_fs->AddInstruction(_OP_LOADBOOL, _fs->PushTarget(),_token == TK_TRUE?1:0);
 				Lex();
 				END_AST_NODE();
@@ -1162,9 +1161,11 @@ public:
 		}
 		if((value & (~((SQInteger)0xFFFFFFFF))) == 0) { //does it fit in 32 bits?
 			_fs->AddInstruction(_OP_LOADINT, target,value);
+			_currastnode->_typetag = SQTypeDesc(SQ_TYPE_INT32);
 		}
 		else {
 			_fs->AddInstruction(_OP_LOAD, target, _fs->GetNumericConstant(value));
+			_currastnode->_typetag = SQTypeDesc(SQ_TYPE_INT64);
 		}
 		_currastnode->_identifier = value;
 		END_AST_NODE();
@@ -1177,11 +1178,14 @@ public:
 		}
 		if(sizeof(SQFloat) == sizeof(SQInt32)) {
 			_fs->AddInstruction(_OP_LOADFLOAT, target,*((SQInt32 *)&value));
+			_currastnode->_typetag = SQTypeDesc(SQ_TYPE_FLOAT32);
 		}
 		else {
 			_fs->AddInstruction(_OP_LOAD, target, _fs->GetNumericConstant(value));
+			_currastnode->_typetag = SQTypeDesc(SQ_TYPE_DOUBLE64);
 		}
 		_currastnode->_identifier = value;
+		
 		END_AST_NODE();
 	}
 	void UnaryOP(SQOpcode op)
@@ -1230,12 +1234,11 @@ public:
 			bool hasattrs = false;
 			bool isstatic = false;
 			bool hastype = false;
-			SQType typedesc;
-			typedesc.m_eMetaType = SQ_TYPE_DYNAMIC;	//'dynamic' by default
+			SQTypeDesc typedesc(SQ_TYPE_DYNAMIC);	//'dynamic' by default
 			SQObjectPtr targetsymbolname;
 
 
-			BEGIN_AST_NODE<SQAstNode_Member>();
+			BEGIN_AST_NODE<SQAstNode_DeclMember>();
 
 			//check if is an attribute
 			if(separator == ';')
@@ -1267,9 +1270,12 @@ public:
 					Lex();
 					SQObject id = tk == TK_FUNCTION ? Expect(TK_IDENTIFIER) : _fs->CreateString(_SC("constructor"));
 					_currastnode->_identifier = id;
+					hastype = true;
+					targetsymbolname = id;
+					typedesc = SQTypeDesc(SQ_TYPE_CLOSURE);
 					Expect(_SC('('));
 					_fs->AddInstruction(_OP_LOAD, _fs->PushTarget(), _fs->GetConstant(id));
-					CreateFunction(id);
+					CreateFunction(id, false, isstatic);
 					_fs->AddInstruction(_OP_CLOSURE, _fs->PushTarget(), _fs->_functions.size() - 1, 0);
 				}
 				break;
@@ -1299,7 +1305,7 @@ public:
 			case TK_NATIVEPTR_T:
 				{
 					hastype = true;
-					typedesc.m_eMetaType = (SQMetaType)(_token - TK_DYNAMIC_T);
+					typedesc = SQTypeDesc((SQMetaType)(_token - TK_DYNAMIC_T));
 					Lex();
 					targetsymbolname = Expect(TK_IDENTIFIER);
 					_currastnode->_identifier = targetsymbolname;
@@ -1328,7 +1334,9 @@ public:
 					SQObject typeName;
 					if(_token == TK_IDENTIFIER)
 					{
+						hastype = true;
 						typeName = targetsymbolname;
+						typedesc = SQTypeDesc(typeName);
 						targetsymbolname = Expect(TK_IDENTIFIER);
 					}
 
@@ -1354,6 +1362,7 @@ public:
 				{
 					Error(_SC("static types are not supported in tables"));
 				}
+				_currastnode->_typetag = SQTypeDesc(SQ_TYPE_DYNAMIC);
 			}
 			else
 			{
@@ -1361,14 +1370,17 @@ public:
 
 				if(hastype)
 				{
+					std::basic_string<SQChar> buf;
 					SQ_CMPL_LOG(_SC("symbol '%s' : '%s'\n"),
 						_string(targetsymbolname)->_val,
-						(typedesc.m_eMetaType == SQ_TYPE_OBJECT) ? _string(typedesc.m_Name)->_val : _lex.Tok2Str(typedesc.m_eMetaType + TK_DYNAMIC_T));
-					
-					{
-						//_typereg->Insert(typedesc, targetsymbolname, _fs->_instructions.size());
-					}
+						typedesc.ToString(buf));
+					_currastnode->_typetag = typedesc;
 
+					//_typereg->Insert(typedesc, targetsymbolname, _fs->_instructions.size());
+				}
+				else
+				{
+					_currastnode->_typetag = SQTypeDesc(SQ_TYPE_DYNAMIC);
 				}
 			}
 
@@ -1388,7 +1400,7 @@ public:
 			Lex();
 		}
 		if( _token == TK_FUNCTION) {
-			BEGIN_AST_NODE<SQAstNode_Local>();
+			BEGIN_AST_NODE<SQAstNode_DeclLocal>();
 			
 			Lex();
 			varname = Expect(TK_IDENTIFIER);
@@ -1404,7 +1416,7 @@ public:
 		}
 
 		do {
-			BEGIN_AST_NODE<SQAstNode_Local>();
+			BEGIN_AST_NODE<SQAstNode_DeclLocal>();
 			varname = Expect(TK_IDENTIFIER);
 			if(_token == _SC('=')) {
 				Lex(); Expression();
@@ -1832,42 +1844,63 @@ public:
 		}
 		_es = es;
 	}
-	void CreateFunction(SQObject &name,bool lambda = false)
+	void CreateFunction(SQObject &name,bool lambda = false, bool isstatic = false)
 	{
 		SQAstNode_FunctionDef* funcastnode = BEGIN_AST_NODE<SQAstNode_FunctionDef>();
-
+		funcastnode->_typetag._parentfunc = funcastnode;
 		_currastnode->_identifier = name;
 		SQFuncState *funcstate = _fs->PushChildState(_ss(_vm));
 		funcstate->_name = name;
 		SQObject paramname;
-		SQAstNode_FunctionParam* paramnode = BEGIN_AST_NODE<SQAstNode_FunctionParam>();
-		_currastnode->_identifier = _fs->CreateString(_SC("this"));
-		funcastnode->_params.push_back(paramnode);
-		funcstate->AddParameter(_fs->CreateString(_SC("this")));
-		END_AST_NODE();
+		SQAstNode_DeclFunctionParam* paramnode = NULL;
+
+		if(!isstatic)
+		{
+			SQAstNode* pParentClass = _currastnode->FindParent(SQAST_Class);
+			SQAstNode* pParentTable = _currastnode->FindParent(SQAST_Table);
+			paramnode = BEGIN_AST_NODE<SQAstNode_DeclFunctionParam>();
+			_currastnode->_identifier = _fs->CreateString(_SC("this"));
+			_currastnode->_typetag = pParentClass != NULL ? pParentClass->_identifier : SQ_TYPE_DYNAMIC;
+			funcastnode->_params.push_back(paramnode);
+			funcstate->AddParameter(_fs->CreateString(_SC("this")));
+			END_AST_NODE();
+		}
+
 		funcstate->_sourcename = _sourcename;
 		SQInteger defparams = 0;
 		while(_token!=_SC(')'))
 		{
 			if(_token == TK_VARPARAMS) {
 				if(defparams > 0) Error(_SC("function with default parameters cannot have variable number of parameters"));
-				paramnode = BEGIN_AST_NODE<SQAstNode_FunctionParam>();
+				paramnode = BEGIN_AST_NODE<SQAstNode_DeclFunctionParam>();
 				_currastnode->_identifier = _fs->CreateString(_SC("vargv"));
 				funcastnode->_params.push_back(paramnode);
 				funcstate->AddParameter(_fs->CreateString(_SC("vargv")));
 				funcstate->_varparams = true;
-				END_AST_NODE();
 				Lex();
+				END_AST_NODE();
 				if(_token != _SC(')')) Error(_SC("expected ')'"));
 				break;
 			}
 			else {
+				SQTypeDesc typedesc;
+				if(_isbuiltintype(_token))
+				{
+					typedesc = SQTypeDesc((SQMetaType)(_token - TK_DYNAMIC_T));
+					Lex();
+				}
 				paramname = Expect(TK_IDENTIFIER);
-				paramnode = BEGIN_AST_NODE<SQAstNode_FunctionParam>();
+				paramnode = BEGIN_AST_NODE<SQAstNode_DeclFunctionParam>();
+				if(_token == TK_IDENTIFIER)	//Two identifiers, assuming the first one is type name
+				{
+					typedesc = SQTypeDesc(paramname);
+					paramname = Expect(TK_IDENTIFIER);
+				}
+				_currastnode->_typetag = typedesc;
 				_currastnode->_identifier = paramname;
 				funcastnode->_params.push_back(paramnode);
 				funcstate->AddParameter(paramname);
-				END_AST_NODE();
+
 				if(_token == _SC('=')) { 
 					Lex();
 					Expression();
@@ -1877,6 +1910,7 @@ public:
 				else {
 					if(defparams > 0) Error(_SC("expected '='"));
 				}
+				END_AST_NODE();
 				if(_token == _SC(',')) Lex();
 				else if(_token != _SC(')')) Error(_SC("expected ')' or ','"));
 			}
@@ -1884,6 +1918,21 @@ public:
 		Expect(_SC(')'));
 		for(SQInteger n = 0; n < defparams; n++) {
 			_fs->PopTarget();
+		}
+
+		//Has type specifier
+		if(_token == _SC(':'))
+		{
+			Lex();
+			if(_isbuiltintype(_token))
+			{
+				funcastnode->_returntype = SQTypeDesc(_tokentometatype(_token));
+			}
+			else if(_token == TK_IDENTIFIER)
+			{
+				funcastnode->_returntype = SQTypeDesc(_fs->CreateString(_lex._svalue));
+			}
+			Lex();
 		}
 				
 		SQFuncState *currchunk = _fs;
@@ -1975,9 +2024,9 @@ private:
 	SQAstNode* _currastnode;
 };
 
-bool Compile(SQVM *vm,SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcename, SQObjectPtr &out, bool raiseerror, bool lineinfo)
+bool Compile(SQVM *vm,SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcename, SQObjectPtr &out, bool raiseerror, bool lineinfo, SQAstNode_Document* pAstNode)
 {
-	SQCompiler p(vm, rg, up, sourcename, raiseerror, lineinfo);
+	SQCompiler p(vm, rg, up, sourcename, raiseerror, lineinfo, pAstNode);
 	return p.Compile(out);
 }
 

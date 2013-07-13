@@ -47,7 +47,7 @@ namespace sqnet {
 	int Print(const SQChar* str)
 	{
 		String^ tmp = gcnew System::String(str);
-		Cons::ForegroundColor = System::Windows::Media::Colors::LimeGreen;
+		Cons::ForegroundColor = System::Windows::Media::Colors::Green;
 		System::Console::Write(tmp);
 		return tmp->Length;
 	}

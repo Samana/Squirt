@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
         xmlns:util="clr-namespace:SqWrite.Util"
+        xmlns:sq="clr-namespace:SqWrite"
         x:Class="SqWrite.MainWindow"
         Title="Visual Squirt" Height="750" Width="1000" Loaded="Window_Loaded" Closed="Window_Closed">
     <Window.CommandBindings>
@@ -75,17 +76,13 @@
                     <xcad:LayoutAnchorablePaneGroup DockHeight="300">
                         <xcad:LayoutAnchorablePane>
                             <xcad:LayoutAnchorable ContentId="OutputWindow" Title="Output">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="28"/>
-                                        <RowDefinition Height="35*"/>
-                                    </Grid.RowDefinitions>
-                                    <ToolBar Grid.Row="0">
-                                        <Button Content="Clear" Click="BtnConsoleClear_Click"></Button>
-                                    </ToolBar>
-                                    <RichTextBox x:Name="TextBoxOutput" Grid.Row="1" CaretBrush="White" Background="Black" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible" IsReadOnly="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Width="Auto" Height="Auto" FontFamily="Consolas" Grid.RowSpan="2" FontSize="14">
-                                    </RichTextBox>
-                                </Grid>
+                                <sq:OutputViewer x:Name="OutputViewer"></sq:OutputViewer>
+                            </xcad:LayoutAnchorable>
+                            <xcad:LayoutAnchorable ContentId="ASTWindow" Title="AST">
+                                <sq:AstViewer x:Name="AstViewer"></sq:AstViewer>
+                            </xcad:LayoutAnchorable>
+                            <xcad:LayoutAnchorable ContentId="ReflectionWindow" Title="Reflection">
+                                <sq:ReflectionViewer x:Name="ReflectionViewer"></sq:ReflectionViewer>
                             </xcad:LayoutAnchorable>
                         </xcad:LayoutAnchorablePane>
                     </xcad:LayoutAnchorablePaneGroup>

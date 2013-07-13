@@ -1,23 +1,11 @@
 #include "sqpcheader.h"
 #include "sqtable.h"
 #include "sqreflection.h"
+#include "sqstaticanalyser.h"
 #include "sqvm.h"
 
-void SQNamespace::AddClass(SQObjectPtr name)
-{
-}
 
-SQType* SQNamespace::GetClass(SQObjectPtr name) const
-{
-	SQObjectPtr val;
-	if(_klasses->Get(name, val))
-	{
-		return (SQType*)val._unVal.pUserPointer;
-	}
-	return NULL;
-}
-
-void SQType::InitTypes(HSQUIRRELVM vm)
+const SQChar* SQTypeDesc::GetMetaTypeLiterals(SQMetaType metaType)
 {
 	static const SQChar* literals[] =
 	{
@@ -39,17 +27,56 @@ void SQType::InitTypes(HSQUIRRELVM vm)
 		_SC("function"),//SQ_TYPE_CLOSURE,
 		_SC("nativefunc"),//SQ_TYPE_NATIVECLOSURE,
 		_SC("nativeptr"),//SQ_TYPE_NATIVEPTR,
+		_SC("int_any"),
+		_SC("float_any"),
 		NULL,
 	};
 
+	return literals[metaType];
+}
+
+const SQChar* SQTypeDesc::ToString(std::basic_string<SQChar>& buf) const
+{
+	if(_resolved)
+	{
+		return _string(_resolved->m_Name)->_val;
+	}
+	else
+	{
+		if(sq_isstring(_unresolved))
+		{
+			return _string(_unresolved)->_val;
+		}
+		else if(sq_isinteger(_unresolved))
+		{
+			SQMetaType metaType = (SQMetaType)_integer(_unresolved);
+			if(metaType == SQ_TYPE_CLOSURE && _parentfunc != NULL)
+			{
+				_parentfunc->GetSignatureString(buf);
+				return buf.c_str();
+			}
+			else
+			{
+				return GetMetaTypeLiterals(metaType);
+			}
+		}
+		else
+		{
+			return _SC("");
+		}
+	}
+}
+
+void SQType::InitTypes(HSQUIRRELVM vm)
+{
 	SQType* pType = NULL;
 
 	for(SQInteger i=SQ_TYPE_DYNAMIC; i<=SQ_TYPE_STRING; i++)
 	{
 		sq_new(pType, SQType);
 		pType->m_eMetaType = (SQMetaType)i;
-		pType->m_Name = SQString::Create(_ss(vm), literals[i]);
+		pType->m_Name = SQString::Create(_ss(vm), SQTypeDesc::GetMetaTypeLiterals((SQMetaType)i));
 
-		vm->NewSlot(vm->_roottable, pType->m_Name, pType, false);
+		_table(vm->_roottable)->NewSlot(pType->m_Name, pType);
 	}
 }

@@ -5,6 +5,7 @@
 #include "sqvm.h"
 #include "sqfuncproto.h"
 #include "sqstring.h"
+#include "sqtable.h"
 
 
 const SQChar* GetStringFromAstNodeType(SQAstNodeType type)
@@ -52,14 +53,21 @@ void SQAstNode::Dump(SQInteger nodedepth, SQVM* vm)
 	for(int i=0; i<nodedepth; i++) { scprintf(_SC("  ")); }
 	scprintf(GetStringFromAstNodeType(this->GetNodeType()));
 	SQObjectPtr strIdentifier;
+	std::scstring buf;
 	vm->ToString(_identifier, strIdentifier);
-	scprintf(_SC("  '%s' [ %d : %d - %d : %d ]\n"),
+	scprintf(_SC("  '%s'  [%s]  .........  [ %d : %d - %d : %d ]\n"),
 		_string(strIdentifier)->_val,
+		_typetag.ToString(buf),
 		_startline, _startcol, _endline, _endcol);
 	for(SQUnsignedInteger i=0; i<_commonchildren.size(); i++)
 	{
 		_commonchildren[i]->Dump(nodedepth + 1, vm);
 	}
+}
+
+bool SQAstNode::CollectDefinedTypes(SQTable* pTypeTable, const std::scstring& namePrefix)
+{
+	return true;
 }
 
 bool SQAstNode_NamespaceBase::AddNamespace(SQAstNode_Namespace* pns)
@@ -74,6 +82,68 @@ bool SQAstNode_NamespaceBase::AddClass(SQAstNode_Class* pcl)
 	pcl->SetParent(this);
 	_classes.push_back(pcl);
 	return true;
+}
+
+bool SQAstNode_NamespaceBase::CollectDefinedTypes(SQTable* pTypeTable, const std::scstring& namePrefix)
+{
+	std::scstring childPrefix = namePrefix;
+	if(childPrefix.length() > 0)
+	{
+		childPrefix += _SC(".");
+	}
+
+	if(this->GetNodeType() != SQAST_Document)
+	{
+		childPrefix += _string(_identifier)->_val;
+		childPrefix += _SC(".");
+	}
+
+	for(SQUnsignedInteger i=0; i<_commonchildren.size(); i++)
+	{
+		if(_commonchildren[i]->GetNodeType() == SQAST_Namespace
+			|| _commonchildren[i]->GetNodeType() == SQAST_Class
+			|| _commonchildren[i]->GetNodeType() == SQAST_Document)
+		{
+			SQObjectPtr key = SQString::Create(pTypeTable->_sharedstate, (childPrefix + _string(_commonchildren[i]->_identifier)->_val).c_str());
+			SQObjectPtr val = SQTable::Create(pTypeTable->_sharedstate, 0);
+			if(!pTypeTable->NewSlot(key, val))
+				return false;
+
+			if(!_commonchildren[i]->CollectDefinedTypes(_table(val), childPrefix))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+bool SQAstNode_Constant::DecorateWithTypeInfo(SQAssembly* pAssembly)
+{
+	return true;
+}
+
+bool SQAstNode_Var::DecorateWithTypeInfo(SQAssembly* pAssembly)
+{
+	return true;
+}
+
+void SQAstNode_FunctionDef::GetSignatureString(std::scstring& signature) const
+{
+	//FIXME: Potential inf loop if function param has the same function type?
+	std::basic_stringstream<SQChar> stream;
+	stream << _SC("function ( ");
+	std::basic_string<SQChar> buf;
+	for(SQUnsignedInteger i=0; i<_params.size(); i++)
+	{
+		stream << _params[i]->_typetag.ToString(buf);
+		if(i != _params.size() - 1)
+		{
+			stream << _SC(", ");
+		}
+	}
+	stream << _SC(" ) : ");
+	stream << _returntype.ToString(buf);
+	signature = stream.str();
 }
 
 #endif//NO_COMPILER

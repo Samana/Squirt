@@ -438,6 +438,7 @@
     <ClInclude Include="..\..\SQUIRREL3\squirrel\sqstaticanalyser.h" />
     <ClInclude Include="..\..\SQUIRREL3\squirrel\sqstring.h" />
     <ClInclude Include="..\..\SQUIRREL3\squirrel\sqtable.h" />
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\squirt.h" />
     <ClInclude Include="..\..\SQUIRREL3\squirrel\squserdata.h" />
     <ClInclude Include="..\..\SQUIRREL3\squirrel\squtils.h" />
     <ClInclude Include="..\..\SQUIRREL3\squirrel\sqvm.h" />

@@ -129,7 +129,8 @@ SQRESULT sq_compile(HSQUIRRELVM v,SQLEXREADFUNC read,SQUserPointer p,const SQCha
 {
 	SQObjectPtr o;
 #ifndef NO_COMPILER
-	if(Compile(v, read, p, sourcename, o, raiseerror?true:false, _ss(v)->_debuginfo)) {
+	SQAstNode_Document astroot;
+	if(Compile(v, read, p, sourcename, o, raiseerror?true:false, _ss(v)->_debuginfo, &astroot)) {
 		v->Push(SQClosure::Create(_ss(v), _funcproto(o)));
 		return SQ_OK;
 	}
@@ -1471,6 +1472,18 @@ struct BufState{
 struct SQCompileUnit
 {
 	SQObjectPtr _funcproto;
+	SQAstNode_Document* _astroot;
+
+	SQCompileUnit()
+		: _astroot(NULL)
+	{
+		_astroot = new SQAstNode_Document();
+	}
+
+	~SQCompileUnit()
+	{
+		delete _astroot;
+	}
 };
 
 SQInteger buf_lexfeed(SQUserPointer file)
@@ -1495,7 +1508,8 @@ SQRESULT sq_compilestatic(HSQUIRRELVM v, SQOPENSOURCEFUNC opensrcfunc, SQCLOSESO
 	SQChar* srcName;
 	SQInteger srclen;
 
-	sqvector<SQCompileUnit> objlist;
+	sqvector<SQCompileUnit*> objlist;
+	bool bFailed = false;
 
 	for(SQInteger i=0; i<numsources; i++)
 	{
@@ -1506,26 +1520,51 @@ SQRESULT sq_compilestatic(HSQUIRRELVM v, SQOPENSOURCEFUNC opensrcfunc, SQCLOSESO
 			buf.size = srclen;
 			buf.ptr = 0;
 
-			SQCompileUnit unit;
-			bool bSucceeded = Compile(v, buf_lexfeed, &buf, srcName, unit._funcproto, raiseerror ? true : false, _ss(v)->_debuginfo);
+			SQCompileUnit* unit = new SQCompileUnit();
+			bool bSucceeded = Compile(v, buf_lexfeed, &buf, srcName, unit->_funcproto, raiseerror ? true : false, _ss(v)->_debuginfo, unit->_astroot);
 			closesrcfunc(&src, &srclen, i, up);
 
 			if(bSucceeded)
 			{
 				objlist.push_back(unit);
-				//v->Push(SQClosure::Create(_ss(v), _funcproto(o)));
 			}
 			else
 			{
-				return SQ_ERROR;
+				delete unit;
+				bFailed = true;
+				break;
 			}
 		}
 	}
 
+	SQAssembly* pAssembly = new SQAssembly();
+	pAssembly->_name = SQString::Create(v->_sharedstate, assemblyname ? assemblyname : _SC("anonymous_assembly"));
+	pAssembly->_types = SQTable::Create(v->_sharedstate, 0);
+
 	for(SQUnsignedInteger icu = 0; icu < objlist.size(); icu++)
 	{
-		v->Push(SQClosure::Create(_ss(v), _funcproto(objlist[icu]._funcproto)));
+		v->Push(SQClosure::Create(_ss(v), _funcproto(objlist[icu]->_funcproto)));
+		objlist[icu]->_astroot->CollectDefinedTypes(_table(pAssembly->_types), _SC(""));
 	}
+
+	scprintf(_SC("\n\n============================= Types =============================\n\n"));
+
+	SQInteger ridx=0;
+	SQObjectPtr key,val;
+	while( (ridx = _table(pAssembly->_types)->Next(true,ridx,key,val)) != -1 )
+	{
+		scprintf(_SC("%s\n"), _string(key)->_val);
+	}
+
+	for(SQUnsignedInteger icu = 0; icu < objlist.size(); icu++)
+	{
+		delete objlist[icu];
+	}
+	if(pAssembly)
+	{
+		delete pAssembly;
+	}
+
 	return SQ_OK;
 }
 

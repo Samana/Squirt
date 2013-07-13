@@ -101,6 +101,18 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="AstViewer.xaml.cs">
+      <DependentUpon>AstViewer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="CallStack.xaml.cs">
+      <DependentUpon>CallStack.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="OutputViewer.xaml.cs">
+      <DependentUpon>OutputViewer.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ReflectionViewer.xaml.cs">
+      <DependentUpon>ReflectionViewer.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SqDocument.xaml.cs">
       <DependentUpon>SqDocument.xaml</DependentUpon>
     </Compile>
@@ -109,6 +121,14 @@
     </Compile>
     <Compile Include="Util\Commands.cs" />
     <Compile Include="Util\TextBoxWriter.cs" />
+    <Page Include="AstViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="CallStack.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -121,6 +141,14 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="OutputViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ReflectionViewer.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="SqDocument.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

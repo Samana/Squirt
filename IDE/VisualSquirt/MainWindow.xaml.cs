@@ -90,7 +90,7 @@ namespace SqWrite
 			}
 		}
 
-		private async void ExecCommandRun(RoutedEventArgs e)
+		private async Task ExecCommandRun(RoutedEventArgs e)
 		{
 			if (ActiveDocument != null)
 			{
@@ -108,7 +108,7 @@ namespace SqWrite
 
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
-			TextBoxWriter tbw = new TextBoxWriter(TextBoxOutput);
+			TextBoxWriter tbw = new TextBoxWriter(OutputViewer.TextBoxOutput);
 			System.Console.SetError(tbw);
 			System.Console.SetOut(tbw);
 			Console.WriteLine("...");
@@ -122,11 +122,6 @@ namespace SqWrite
 				m_VM.Dispose();
 				m_VM = null;
 			}
-		}
-
-		private void BtnConsoleClear_Click(object sender, RoutedEventArgs e)
-		{
-			TextBoxOutput.Document.Blocks.Clear();
 		}
 
 		void layoutDoc_Closed(object sender, EventArgs e)
@@ -174,7 +169,7 @@ namespace SqWrite
 			}
 		}
 
-		private void CommandBinding_Executed(object sender, ExecutedRoutedEventArgs e)
+		private async void CommandBinding_Executed(object sender, ExecutedRoutedEventArgs e)
 		{
 			if (e.Command == ApplicationCommands.Save)
 			{
@@ -190,7 +185,7 @@ namespace SqWrite
 			}
 			else if (e.Command == Commands.Run)
 			{
-				ExecCommandRun(e);
+				await ExecCommandRun(e);
 			}
 		}
 

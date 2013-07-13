@@ -1,24 +1,17 @@
 #ifndef _SQREFLECTION_H_
 #define _SQREFLECTION_H_
 
+#include "squirt.h"
+
 struct SQType;
 
 struct SQAssembly
 {
-	SQString* _name;
-	SQTable* _references;
-	SQTable* _types;
+	SQObjectPtr _name;
+	SQObjectPtr _types;
+	bool _isloaded;
 
 	SQObjectPtr FindType(SQString* name);
-};
-
-struct SQNamespace
-{
-	SQTable* _subnamespaces;
-	SQTable* _klasses;
-
-	void AddClass(SQObjectPtr name);
-	SQType* GetClass(SQObjectPtr name) const;
 };
 
 enum SQMetaType
@@ -41,12 +34,54 @@ enum SQMetaType
 	SQ_TYPE_CLOSURE,
 	SQ_TYPE_NATIVECLOSURE,
 	SQ_TYPE_NATIVEPTR,
+	SQ_TYPE_INT_ANY,
+	SQ_TYPE_FLOAT_ANY,
+};
+
+struct SQTypeDesc
+{
+	SQType* _resolved;
+	SQObjectPtr _unresolved;
+	struct SQAstNode_FunctionDef* _parentfunc;
+
+	static const SQChar* GetMetaTypeLiterals(SQMetaType metaType);
+
+	SQTypeDesc()
+		: _resolved(NULL)
+		, _unresolved((SQInteger)SQ_TYPE_DYNAMIC)
+		, _parentfunc(NULL)
+	{
+	}
+
+	SQTypeDesc(SQMetaType metaType)
+		: _resolved(NULL)
+		, _unresolved((SQInteger)metaType)
+		, _parentfunc(NULL)
+	{
+	}
+
+	SQTypeDesc(SQObjectPtr typeName)
+		: _resolved(NULL)
+		, _unresolved(typeName)
+		, _parentfunc(NULL)
+	{
+		assert(sq_isstring(typeName));
+	}
+
+	const SQChar* ToString(std::basic_string<SQChar>& buf) const;
 };
 
 struct SQType //: public CHAINABLE_OBJ
 {
 	SQMetaType m_eMetaType;
 	SQObjectPtr m_Name;
+	SQAssembly* m_pOwnerAssembly;
+
+	SQType()
+		: m_eMetaType(SQ_TYPE_DYNAMIC)
+		, m_pOwnerAssembly(NULL)
+	{
+	}
 
 	SQObjectPtr ToString() const
 	{

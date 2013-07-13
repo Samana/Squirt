@@ -89,6 +89,9 @@
     <ClInclude Include="..\..\SQUIRREL3\squirrel\sqvm.h">
       <Filter>Src</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\SQUIRREL3\squirrel\squirt.h">
+      <Filter>Src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\SQUIRREL3\squirrel\sq_llvm.cpp">

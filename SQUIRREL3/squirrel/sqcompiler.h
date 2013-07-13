@@ -100,6 +100,9 @@ struct SQVM;
 
 #define TK_SQUIRT_END	(TK_NATIVEPTR_T + 1)
 
+#define _isbuiltintype( tk ) ( TK_DYNAMIC_T <= tk && tk <= TK_NATIVEPTR_T )
+#define _tokentometatype( tk ) ((SQMetaType)(tk - TK_DYNAMIC_T))
+
 typedef void(*CompilerErrorFunc)(void *ud, const SQChar *s);
-bool Compile(SQVM *vm, SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcename, SQObjectPtr &out, bool raiseerror, bool lineinfo);
+bool Compile(SQVM *vm, SQLEXREADFUNC rg, SQUserPointer up, const SQChar *sourcename, SQObjectPtr &out, bool raiseerror, bool lineinfo, struct SQAstNode_Document* pAstNode);
 #endif //_SQCOMPILER_H_
