@@ -10,11 +10,11 @@ using System.Windows.Media;
 
 namespace SqWrite.Util
 {
-	class TextBoxWriter : TextWriter
+	class RichTextBoxWriter : TextWriter
 	{
 		RichTextBox m_Output;
 
-		public TextBoxWriter(RichTextBox output)
+		public RichTextBoxWriter(RichTextBox output)
 		{
 			m_Output = output;
 		}
@@ -36,7 +36,7 @@ namespace SqWrite.Util
 			{
 				AppendText(m_Output, new SolidColorBrush(color), new string(buffer).Replace('\n', '\r'));	//But why...
 			};
-			m_Output.Dispatcher.BeginInvoke(action);
+			m_Output.Dispatcher.BeginInvoke(action, System.Windows.Threading.DispatcherPriority.Input);
 		}
 
 		public override Encoding Encoding
@@ -50,6 +50,47 @@ namespace SqWrite.Util
 			TextRange tr = new TextRange(end, end);
 			tr.Text = text;
 			tr.ApplyPropertyValue(TextElement.ForegroundProperty, color);
+			box.ScrollToEnd();
+		}
+	}
+
+	class TextBoxWriter : TextWriter
+	{
+		TextBox m_Output;
+
+		public TextBoxWriter(TextBox output)
+		{
+			m_Output = output;
+		}
+
+		public override void Write(char value)
+		{
+			Color color = sqnet.Cons.ForegroundColor;
+			Action action = delegate
+			{
+				AppendText(m_Output, value.ToString());
+			};
+			m_Output.Dispatcher.BeginInvoke(action, System.Windows.Threading.DispatcherPriority.Input);
+		}
+
+		public override void Write(char[] buffer, int index, int count)
+		{
+			Color color = sqnet.Cons.ForegroundColor;
+			Action action = delegate
+			{
+				AppendText(m_Output, new string(buffer));
+			};
+			m_Output.Dispatcher.BeginInvoke(action);
+		}
+
+		public override Encoding Encoding
+		{
+			get { return System.Text.Encoding.UTF8; }
+		}
+
+		void AppendText(TextBox box, string text)
+		{
+			box.AppendText(text);
 		}
 	}
 }

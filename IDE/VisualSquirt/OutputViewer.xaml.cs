@@ -27,7 +27,8 @@ namespace SqWrite
 
 		private void BtnConsoleClear_Click(object sender, RoutedEventArgs e)
 		{
-			TextBoxOutput.Document.Blocks.Clear();
+			//TextBoxOutput.Document.Blocks.Clear();
+			TextBoxOutput.Text = "";
 		}
 
 		private void TextBoxOutput_TextChanged(object sender, TextChangedEventArgs e)

@@ -2,6 +2,7 @@
 #define __SQSTATICANALYSER_H__
 
 #include "squirt.h"
+#include "sqopcodes.h"
 
 struct SQAstNode;
 struct SQAstNode_Namespace;
@@ -137,6 +138,17 @@ struct SQAstNode {
 		}
 		return true;
 	}
+	virtual bool CheckTypes(SQAssembly* pAssembly)
+	{
+		for(SQUnsignedInteger i=0; i<_commonchildren.size(); i++)
+		{
+			if(!_commonchildren[i]->CheckTypes(pAssembly))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
 
 	SQ_AST_NO_COPY(SQAstNode);
 };
@@ -195,14 +207,21 @@ struct SQAstNode_Expr : public SQAstNode {
 	virtual ~SQAstNode_Expr() { }
 };
 
-struct SQAstNode_UnaryExpr : public SQAstNode {
+struct SQAstNode_UnaryExpr : public SQAstNode_Expr {
 	AST_NODE_TYPE(SQAST_UnaryExpr);
 	virtual ~SQAstNode_UnaryExpr() { }
+	virtual bool CheckTypes(SQAssembly* pAssembly);
+
+	SQOpcode _opcode;
 };
 
 struct SQAstNode_BinaryExpr : public SQAstNode_Expr {
 	AST_NODE_TYPE(SQAST_BinaryExpr);
 	virtual ~SQAstNode_BinaryExpr() { }
+	virtual bool CheckTypes(SQAssembly* pAssembly);
+
+	SQOpcode _opcode;
+	SQInteger _op3;
 };
 
 struct SQAstNode_AssignmentExpr : public SQAstNode_BinaryExpr {

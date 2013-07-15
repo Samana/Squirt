@@ -108,6 +108,7 @@ namespace SqWrite
 
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
+			//RichTextBoxWriter tbw = new RichTextBoxWriter(OutputViewer.TextBoxOutput);
 			TextBoxWriter tbw = new TextBoxWriter(OutputViewer.TextBoxOutput);
 			System.Console.SetError(tbw);
 			System.Console.SetOut(tbw);

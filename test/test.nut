@@ -43,10 +43,21 @@ namespace TestNamespace
 		
 		function test_exprs()
 		{
-			local a, b, c;
-			a = 1 + 2 * 3 - 5 / ( 2 + 4 ) + 3;
-			b = 2 < 3 && 3 * 5 > 10 || !(4 > 3);
+			local a, b, c, d;
+			a = 1 + 2 * 3.2 - 5 / ( 2 + 4 ) + 3;
+			b = 2 < 3 && 3 * 5 > 10.4 || !(4 > 3);
 			c = (1 << 30) | (0xff & a) << 16 | ~5;
+			d = 1;
+			d = d++;
+			d = d--;
+			d = ++d;
+			d = --d;
+			d = d++ * 2;
+			d = 2 * d--;
+			d += 1;
+			d *= 2;
+			d -= 3;
+			d /= 4;
 		}
 		
 		function test_params(int x, float y, string z, A w)

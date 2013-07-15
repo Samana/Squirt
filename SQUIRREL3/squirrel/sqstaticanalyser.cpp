@@ -127,6 +127,98 @@ bool SQAstNode_Var::DecorateWithTypeInfo(SQAssembly* pAssembly)
 	return true;
 }
 
+bool SQAstNode_UnaryExpr::CheckTypes(SQAssembly* pAssembly)
+{
+	if(!SQAstNode_Expr::CheckTypes(pAssembly))
+		return false;
+
+	if(_commonchildren.size() != 1)
+		return false;
+
+	SQMetaType lt = _commonchildren[0]->_typetag.GetMetaType();
+
+	switch(_opcode)
+	{
+	case _OP_NEG:
+		break;
+	case _OP_NOT:
+		break;
+	case _OP_BWNOT:
+		break;
+	case _OP_TYPEOF:
+		break;
+	case _OP_RESUME:
+		break;
+	case _OP_CLONE:
+		break;
+	};
+	//Where is ++?
+
+	return true;
+}
+
+bool SQAstNode_BinaryExpr::CheckTypes(SQAssembly* pAssembly)
+{
+	if(!SQAstNode_Expr::CheckTypes(pAssembly))
+		return false;
+
+	if(_commonchildren.size() != 2)
+		return false;
+
+	SQMetaType lt = _commonchildren[0]->_typetag.GetMetaType();
+	SQMetaType rt = _commonchildren[1]->_typetag.GetMetaType();
+	
+
+	switch(_opcode)
+	{
+	case _OP_ADD:
+	case _OP_SUB:
+	case _OP_MUL:
+	case _OP_DIV:
+	case _OP_MOD:
+		{
+
+			if(_metatypeisnumber(lt) && _metatypeisnumber(rt))
+			{
+				_typetag = std::max<SQMetaType>(lt, rt);
+			}
+			else if(lt == SQ_TYPE_DYNAMIC || rt == SQ_TYPE_DYNAMIC)
+			{
+				_typetag = SQ_TYPE_DYNAMIC;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		break;
+	case _OP_BITW:
+		{
+			if(_metatypeisinteger(lt) && _metatypeisinteger(rt))
+			{
+				_typetag = std::max<SQMetaType>(lt, rt);
+			}
+			else if(lt == SQ_TYPE_DYNAMIC || rt == SQ_TYPE_DYNAMIC)
+			{
+				_typetag = SQ_TYPE_DYNAMIC;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		break;
+	case _OP_CMP:
+		{
+			_typetag = SQ_TYPE_BOOLEAN;
+		}
+		break;
+	};
+
+	
+	return true;
+}
+
 void SQAstNode_FunctionDef::GetSignatureString(std::scstring& signature) const
 {
 	//FIXME: Potential inf loop if function param has the same function type?

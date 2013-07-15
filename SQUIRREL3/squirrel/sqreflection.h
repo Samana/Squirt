@@ -36,8 +36,19 @@ enum SQMetaType
 	SQ_TYPE_NATIVEPTR,
 	SQ_TYPE_INT_ANY,
 	SQ_TYPE_FLOAT_ANY,
+	SQ_TYPE_MAX,
 };
 
+inline bool _metatypeisnumber(SQMetaType X)
+{
+	return X >= SQ_TYPE_CHAR8 && X <= SQ_TYPE_DOUBLE64;
+}
+
+inline bool _metatypeisinteger(SQMetaType x)
+{
+	return x >= SQ_TYPE_CHAR8 && x <= SQ_TYPE_UINT64;
+}
+	
 struct SQTypeDesc
 {
 	SQType* _resolved;
@@ -68,6 +79,21 @@ struct SQTypeDesc
 		assert(sq_isstring(typeName));
 	}
 
+	SQMetaType GetMetaType() const
+	{
+		if(_resolved)
+		{
+			assert(false && "Not impl");
+			return SQ_TYPE_VOID;
+		}
+		else
+		{
+			if(sq_isinteger(_unresolved))
+				return (SQMetaType)_integer(_unresolved);
+			else
+				return SQ_TYPE_OBJECT;
+		}
+	}
 	const SQChar* ToString(std::scstring& buf) const;
 };
 

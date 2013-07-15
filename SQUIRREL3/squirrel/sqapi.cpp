@@ -1545,6 +1545,7 @@ SQRESULT sq_compilestatic(HSQUIRRELVM v, SQOPENSOURCEFUNC opensrcfunc, SQCLOSESO
 	{
 		v->Push(SQClosure::Create(_ss(v), _funcproto(objlist[icu]->_funcproto)));
 		objlist[icu]->_astroot->CollectDefinedTypes(_table(pAssembly->_types), _SC(""));
+		objlist[icu]->_astroot->CheckTypes(pAssembly);
 	}
 
 	scprintf(_SC("\n\n============================= Types =============================\n\n"));
@@ -1554,6 +1555,12 @@ SQRESULT sq_compilestatic(HSQUIRRELVM v, SQOPENSOURCEFUNC opensrcfunc, SQCLOSESO
 	while( (ridx = _table(pAssembly->_types)->Next(true,ridx,key,val)) != -1 )
 	{
 		scprintf(_SC("%s\n"), _string(key)->_val);
+	}
+
+	scprintf(_SC("\n\n=================================\n  AST\n=================================\n"));
+	for(SQUnsignedInteger icu = 0; icu < objlist.size(); icu++)
+	{
+		objlist[icu]->_astroot->Dump(0, v);
 	}
 
 	for(SQUnsignedInteger icu = 0; icu < objlist.size(); icu++)

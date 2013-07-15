@@ -13,7 +13,9 @@
         <ToolBar Grid.Row="0" Background="#FFF0F0F0">
             <Button Content="Clear" Click="BtnConsoleClear_Click"></Button>
         </ToolBar>
-        <RichTextBox x:Name="TextBoxOutput" Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsReadOnly="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Width="Auto" Height="Auto" FontFamily="Consolas" Grid.RowSpan="2" FontSize="14" Background="#FFE8E8E8">
-        </RichTextBox>
+        <!--RichTextBox x:Name="TextBoxOutput" Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsReadOnly="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Width="Auto" Height="Auto" FontFamily="Consolas" Grid.RowSpan="2" FontSize="14" Background="#FFE8E8E8">
+        </RichTextBox-->
+        <TextBox  x:Name="TextBoxOutput" Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" IsReadOnly="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Width="Auto" Height="Auto" FontFamily="Consolas" Grid.RowSpan="2" FontSize="12" Background="#FFE8E8E8">
+        </TextBox>
     </Grid>
 </UserControl>

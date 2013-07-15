@@ -293,9 +293,6 @@ public:
 			o =_fs->BuildProto();
 #ifdef _DEBUG_DUMP
 			_fs->Dump(_funcproto(o));
-
-			SQ_CMPL_LOG(_SC("\n\n=================================\n  AST\n=================================\n"));
-			_astroot->Dump(0, _vm);
 #endif
 		}
 		else {
@@ -643,7 +640,9 @@ public:
 	}
 	template<typename T> void BIN_EXP(SQOpcode op, T f,SQInteger op3 = 0)
 	{
-		BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
+		SQAstNode_BinaryExpr* binexprastnode = BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
+		binexprastnode->_opcode = op;
+		binexprastnode->_op3 = op3;
 		const SQChar* optoken;
 		if(op == _OP_BITW)
 		{
@@ -670,7 +669,9 @@ public:
 	{
 		LogicalAndExp();
 		for(;;) if(_token == TK_OR) {
-			BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
+			SQAstNode_BinaryExpr* binexprastnode = BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
+			binexprastnode->_opcode = _OP_OR;
+			binexprastnode->_op3 = 0;
 			_currastnode->_identifier = _fs->CreateString(_SC("||"));
 			SQInteger first_exp = _fs->PopTarget();
 			SQInteger trg = _fs->PushTarget();
@@ -692,7 +693,9 @@ public:
 		BitwiseOrExp();
 		for(;;) switch(_token) {
 		case TK_AND: {
-			BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
+			SQAstNode_BinaryExpr* binexprastnode = BEGIN_AST_NODE_PREFIX<SQAstNode_BinaryExpr>();
+			binexprastnode->_opcode = _OP_AND;
+			binexprastnode->_op3 = 0;
 			_currastnode->_identifier = _fs->CreateString(_SC("&&"));
 			_currastnode->_typetag = SQ_TYPE_BOOLEAN;
 			SQInteger first_exp = _fs->PopTarget();
@@ -834,8 +837,8 @@ public:
 				pos = -1;
 				Lex();
 
-				BEGIN_AST_NODE_PREFIX<SQAstNode_Expr>();
-				_currastnode->_identifier = _fs->CreateString(_SC("."));
+				//BEGIN_AST_NODE_PREFIX<SQAstNode_Expr>();
+				//_currastnode->_identifier = _fs->CreateString(_SC("."));
 				idf = Expect(TK_IDENTIFIER);
 				BEGIN_AST_NODE<SQAstNode_Constant>();
 				_currastnode->_identifier = idf;
@@ -854,7 +857,7 @@ public:
 					_es.etype = OBJECT;
 				}
 
-				END_AST_NODE();
+				//END_AST_NODE();
 				break;
 			case _SC('['):
 				if(_lex._prevtoken == _SC('\n')) Error(_SC("cannot brake deref/or comma needed after [exp]=exp slot declaration"));
@@ -876,8 +879,10 @@ public:
 			case TK_MINUSMINUS:
 			case TK_PLUSPLUS:
 				{
+					BEGIN_AST_NODE_PREFIX<SQAstNode_UnaryExpr>();
 					if(IsEndOfStatement()) return;
-					SQInteger diff = (_token==TK_MINUSMINUS) ? -1 : 1;
+					bool bMinus = _token==TK_MINUSMINUS;
+					SQInteger diff = (bMinus) ? -1 : 1;
 					Lex();
 					switch(_es.etype)
 					{
@@ -885,10 +890,12 @@ public:
 						case OBJECT:
 						case BASE:
 							Emit2ArgsOP(_OP_PINC, diff);
+							_currastnode->_identifier = _fs->CreateString(bMinus ? _SC("x--") : _SC("x++"));
 							break;
 						case LOCAL: {
 							SQInteger src = _fs->PopTarget();
 							_fs->AddInstruction(_OP_PINCL, _fs->PushTarget(), src, 0, diff);
+							_currastnode->_identifier = _fs->CreateString(bMinus ? _SC("x--(L)") : _SC("x++(L)"));
 									}
 							break;
 						case OUTER: {
@@ -898,8 +905,10 @@ public:
 							_fs->AddInstruction(_OP_PINCL,    tmp1, tmp2, 0, diff);
 							_fs->AddInstruction(_OP_SETOUTER, tmp2, _es.epos, tmp2);
 							_fs->PopTarget();
+							_currastnode->_identifier = _fs->CreateString(bMinus ? _SC("x--(L)") : _SC("x++(L)"));
 						}
 					}
+					END_AST_NODE();
 				}
 				return;
 				break;	
@@ -1190,7 +1199,8 @@ public:
 	}
 	void UnaryOP(SQOpcode op)
 	{
-		BEGIN_AST_NODE<SQAstNode_UnaryExpr>();
+		SQAstNode_UnaryExpr* unaryexprastnode = BEGIN_AST_NODE<SQAstNode_UnaryExpr>();
+		unaryexprastnode->_opcode = op;
 		_currastnode->_identifier = _fs->CreateString(s_OpCodeTokens[op]);
 		PrefixedExpr();
 		SQInteger src = _fs->PopTarget();
@@ -1819,8 +1829,10 @@ public:
 	}
 	void PrefixIncDec(SQInteger token)
 	{
+		BEGIN_AST_NODE<SQAstNode_UnaryExpr>();
 		SQExpState  es;
-		SQInteger diff = (token==TK_MINUSMINUS) ? -1 : 1;
+		bool bMinus = token==TK_MINUSMINUS;
+		SQInteger diff = bMinus ? -1 : 1;
 		Lex();
 		es = _es;
 		_es.donot_get = true;
@@ -1830,19 +1842,22 @@ public:
 		}
 		else if(_es.etype==OBJECT || _es.etype==BASE) {
 			Emit2ArgsOP(_OP_INC, diff);
+			_currastnode->_identifier = _fs->CreateString(bMinus ? _SC("--x") : _SC("++x"));
 		}
 		else if(_es.etype==LOCAL) {
 			SQInteger src = _fs->TopTarget();
 			_fs->AddInstruction(_OP_INCL, src, src, 0, diff);
-			
+			_currastnode->_identifier = _fs->CreateString(bMinus ? _SC("--x(L)") : _SC("++x(L)"));
 		}
 		else if(_es.etype==OUTER) {
 			SQInteger tmp = _fs->PushTarget();
 			_fs->AddInstruction(_OP_GETOUTER, tmp, _es.epos);
 			_fs->AddInstruction(_OP_INCL,     tmp, tmp, 0, diff);
 			_fs->AddInstruction(_OP_SETOUTER, tmp, _es.epos, tmp);
+			_currastnode->_identifier = _fs->CreateString(bMinus ? _SC("--x(L)") : _SC("++x(L)"));
 		}
 		_es = es;
+		END_AST_NODE();
 	}
 	void CreateFunction(SQObject &name,bool lambda = false, bool isstatic = false)
 	{
