@@ -173,6 +173,9 @@ public:
 	SQBool _suspended_root;
 	SQInteger _suspended_target;
 	SQInteger _suspended_traps;
+#ifdef SQ_JIT_LLVM
+	SQBool _jitenabled;
+#endif
 };
 
 struct AutoDec{

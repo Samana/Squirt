@@ -1875,7 +1875,14 @@ public:
 			SQAstNode* pParentTable = _currastnode->FindParent(SQAST_Table);
 			paramnode = BEGIN_AST_NODE<SQAstNode_DeclFunctionParam>();
 			_currastnode->_identifier = _fs->CreateString(_SC("this"));
-			_currastnode->_typetag = pParentClass != NULL ? pParentClass->_identifier : SQ_TYPE_DYNAMIC;
+			if(pParentClass != NULL)
+			{
+				_currastnode->_typetag = pParentClass->_identifier;
+			}
+			else
+			{
+				_currastnode->_typetag = SQ_TYPE_DYNAMIC;
+			}
 			funcastnode->_params.push_back(paramnode);
 			funcstate->AddParameter(_fs->CreateString(_SC("this")));
 			END_AST_NODE();

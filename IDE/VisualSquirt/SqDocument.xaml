@@ -7,22 +7,26 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" Loaded="UserControl_Loaded">
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="20"></ColumnDefinition>
-            <ColumnDefinition Width="*"></ColumnDefinition>
-        </Grid.ColumnDefinitions>
-        <Canvas x:Name="BreakPointViewer" Background="#FFEEEEEE"/>
-        <avalonedit:TextEditor
-            Grid.Column="1"
-            x:Name="m_TextEdit"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch"
-            HorizontalScrollBarVisibility="Auto"
-            VerticalScrollBarVisibility="Auto"
-            ShowLineNumbers="True" 
-            LineNumbersForeground="#FF00BBBB"
-            SyntaxHighlighting="Squirrel"
-            FontFamily="Courier New"
-            FontSize="14"/>
+        <ScrollViewer x:Name="m_Scroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Grid x:Name="m_InnerGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="16"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Canvas x:Name="m_BreakPointViewer" Background="#FFEEEEEE"/>
+                <avalonedit:TextEditor
+                    Grid.Column="1"
+                    x:Name="m_TextEdit"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    HorizontalScrollBarVisibility="Hidden"
+                    VerticalScrollBarVisibility="Hidden"
+                    ShowLineNumbers="True" 
+                    LineNumbersForeground="#FF00BBBB"
+                    SyntaxHighlighting="Squirrel"
+                    FontFamily="Courier New"
+                    FontSize="14"/>
+            </Grid>
+        </ScrollViewer>
     </Grid>
 </UserControl>

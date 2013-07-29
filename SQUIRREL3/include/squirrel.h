@@ -487,6 +487,8 @@ SQUIRREL_API void sq_setnativedebughook(HSQUIRRELVM v,SQDEBUGHOOK hook);
 typedef int (*PrintfFuncType)(const SQChar*, ...);
 SQUIRREL_API void sq_setstaticprintffunc(PrintfFuncType printfFunc);
 SQUIRREL_API PrintfFuncType sq_getstaticprintffunc();
+SQUIRREL_API SQBool sq_getjitenabled(HSQUIRRELVM vm);
+SQUIRREL_API void sq_enablejit(HSQUIRRELVM vm, SQBool bEnable);
 
 /*UTILITY MACRO*/
 #define sq_isnumeric(o) ((o)._type&SQOBJECT_NUMERIC)

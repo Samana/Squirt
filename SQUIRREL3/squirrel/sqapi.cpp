@@ -1610,3 +1610,19 @@ void sq_free(void *p,SQUnsignedInteger size)
 {
 	SQ_FREE(p,size);
 }
+
+SQBool sq_getjitenabled(HSQUIRRELVM vm)
+{
+#ifdef SQ_JIT_LLVM
+	return vm->_jitenabled;
+#else
+	return SQFalse;
+#endif
+}
+
+void sq_enablejit(HSQUIRRELVM vm, SQBool bEnable)
+{
+#ifdef SQ_JIT_LLVM
+	vm->_jitenabled = bEnable;
+#endif
+}

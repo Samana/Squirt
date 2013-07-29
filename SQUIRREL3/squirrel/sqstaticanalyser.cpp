@@ -140,12 +140,19 @@ bool SQAstNode_UnaryExpr::CheckTypes(SQAssembly* pAssembly)
 	switch(_opcode)
 	{
 	case _OP_NEG:
+	case _OP_BWNOT:
+		{
+			_typetag = lt;
+		}
 		break;
 	case _OP_NOT:
-		break;
-	case _OP_BWNOT:
+		{
+			_typetag = SQ_TYPE_BOOLEAN;
+		}
 		break;
 	case _OP_TYPEOF:
+		{
+		}
 		break;
 	case _OP_RESUME:
 		break;
@@ -209,12 +216,29 @@ bool SQAstNode_BinaryExpr::CheckTypes(SQAssembly* pAssembly)
 		}
 		break;
 	case _OP_CMP:
+	case _OP_EQ:
+		{
+			_typetag = SQ_TYPE_BOOLEAN;
+		}
+		break;
+	case _OP_OR:
+	case _OP_AND:
+		{
+			if(_commonchildren[0]->_typetag.GetMetaType() != SQ_TYPE_BOOLEAN
+				|| _commonchildren[1]->_typetag.GetMetaType() != SQ_TYPE_BOOLEAN)
+			{
+				return false;
+			}
+			_typetag = SQ_TYPE_BOOLEAN;
+		}
+		break;
+	case _OP_EXISTS:
+	case _OP_INSTANCEOF:
 		{
 			_typetag = SQ_TYPE_BOOLEAN;
 		}
 		break;
 	};
-
 	
 	return true;
 }

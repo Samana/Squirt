@@ -125,6 +125,9 @@ SQVM::SQVM(SQSharedState *ss)
 	_openouters = NULL;
 	ci = NULL;
 	INIT_CHAIN();ADD_TO_CHAIN(&_ss(this)->_gc_chain,this);
+#ifdef SQ_JIT_LLVM
+	_jitenabled = SQTrue;
+#endif
 }
 
 void SQVM::Finalize()
@@ -727,36 +730,41 @@ exception_restore:
 
 #ifdef SQ_JIT_LLVM
 
-	try
+	if(sq_getjitenabled(this))
 	{
-		sq_jit_func_type funcPtr = (sq_jit_func_type)_sharedstate->GetJitEngine().GetExecEngine()->getPointerToFunction(
-			_closure(closure)->_function->_jitfunction);
-		CallingContext context =
+		try
 		{
-			this,
-			_closure(closure)->_function,
-			&traps,
-			&outres,
-			false,
-			true,
-		};
+			sq_jit_func_type funcPtr = (sq_jit_func_type)_sharedstate->GetJitEngine().GetExecEngine()->getPointerToFunction(
+				_closure(closure)->_function->_jitfunction);
+			CallingContext context =
+			{
+				this,
+				_closure(closure)->_function,
+				&traps,
+				&outres,
+				false,
+				true,
+			};
 
-		funcPtr(&context);
+			funcPtr(&context);
 
-		if(context.Suspend)
-		{
-			return true;
+			if(context.Suspend)
+			{
+				return true;
+			}
+			else
+			{
+				return context.ReturnValue ? true : false;
+			}
 		}
-		else
+		catch(const sqrt_exception& ex)	//FIXME: Give a specific exception type
 		{
-			return context.ReturnValue ? true : false;
+			scprintf(_SC("Error ocurred druing execution."));
 		}
 	}
-	catch(const sqrt_exception& ex)	//FIXME: Give a specific exception type
-	{
-	}
+	else
 
-#else
+#endif
 
 	//
 	{
@@ -1120,7 +1128,6 @@ exception_restore:
 			
 		}
 	}
-#endif
 
 exception_trap:
 	{

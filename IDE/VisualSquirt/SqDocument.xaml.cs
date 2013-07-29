@@ -31,16 +31,26 @@ namespace SqWrite
 	{
 		static readonly string s_TempFolder;
 		static readonly string[] s_Keywords;
+		static readonly double[] s_SupportedScales = new double[21];
 
 		public string DocumentFileName { get; private set; }
 		public TextEditor TextEditor { get { return m_TextEdit; } }
 
+		Dictionary<int, LineMarker> m_BreakPointMarkers = new Dictionary<int, LineMarker>();
+		LineMarker m_ExecutingLineMarker;
+
 		CompletionWindow m_CompletionWindow;
+		int m_CurrentScaleIndex = s_SupportedScales.Length / 2;
 
 		static SqDocument()
 		{
 			try
 			{
+				for (int i = 0; i < s_SupportedScales.Length; i++)
+				{
+					s_SupportedScales[i] = Math.Pow(1.1, i - s_SupportedScales.Length / 2);
+				}
+
 				IHighlightingDefinition customHighlighting;
 				using (Stream s = typeof(SqDocument).Assembly.GetManifestResourceStream("SqWrite.Squirrel.xshd"))
 				{
@@ -114,7 +124,12 @@ namespace SqWrite
 					}
 				}
 				m_TextEdit.Load(DocumentFileName);
-				m_TextEdit.TextArea.MouseWheel += m_TextEdit_TextArea_MouseWheel;
+				m_TextEdit.TextArea.PreviewMouseWheel += m_TextEdit_TextArea_PreviewMouseWheel;
+
+				m_InnerGrid.MouseWheel += m_InnerGrid_MouseWheel;
+				m_BreakPointViewer.MouseDown += m_BreakPointViewer_MouseDown;
+				
+				//m_BreakPointViewer.
 
 				//FIXME : Disable auto complete for now since it's troublesome.
 				//m_TextEdit.TextArea.TextEntering += TextArea_TextEntering;
@@ -203,14 +218,26 @@ namespace SqWrite
 			}
 		}
 
-		private void m_TextEdit_TextArea_MouseWheel(object sender, MouseWheelEventArgs e)
+		private void m_TextEdit_TextArea_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+		{
+			if (!e.Handled)
+			{
+				e.Handled = true;
+				var eventArg = new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta);
+				eventArg.RoutedEvent = UIElement.MouseWheelEvent;
+				eventArg.Source = sender;
+				m_InnerGrid.RaiseEvent(eventArg);
+			}
+		}
+
+		void m_InnerGrid_MouseWheel(object sender, MouseWheelEventArgs e)
 		{
 			if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
 			{
-				double textSize = m_TextEdit.FontSize;
-				textSize += 2 * e.Delta / 120;
-				textSize = Math.Max(5, Math.Min(120, textSize));
-				m_TextEdit.FontSize = textSize;
+				int delta = e.Delta / 120;
+				m_CurrentScaleIndex = Math.Max(0, Math.Min(s_SupportedScales.Length - 1, m_CurrentScaleIndex + delta));
+				double scale = s_SupportedScales[m_CurrentScaleIndex];
+				m_InnerGrid.RenderTransform = new ScaleTransform(scale, scale);
 				e.Handled = true;
 			}
 		}
@@ -261,6 +288,98 @@ namespace SqWrite
 
 		public void Compile()
 		{
+		}
+
+		void m_BreakPointViewer_MouseDown(object sender, MouseButtonEventArgs e)
+		{
+			var pos = e.GetPosition(m_BreakPointViewer);
+			var line = m_TextEdit.TextArea.TextView.GetDocumentLineByVisualTop(pos.Y);
+
+			if (line != null)
+			{
+				LineMarker breakPoint;
+				if (m_BreakPointMarkers.TryGetValue(line.LineNumber, out breakPoint))
+				{
+					m_BreakPointMarkers.Remove(line.LineNumber);
+					m_BreakPointViewer.Children.Remove(breakPoint.UIElement);
+				}
+				else
+				{
+					//FIXME: Move these to LineMarker
+					double offset = 1;
+					var ellipse = new Ellipse()
+					{
+						Width =  14,
+						Height = 14,
+						Fill = Brushes.Crimson,
+						Stroke = Brushes.White,
+						StrokeThickness = 1.2
+					};
+					double lineY = m_TextEdit.TextArea.TextView.GetVisualPosition(new TextViewPosition(line.LineNumber, 1), VisualYPosition.LineTop).Y + offset;
+					ellipse.RenderTransform = new TranslateTransform(offset, lineY);
+					m_BreakPointViewer.Children.Add(ellipse);
+
+					m_BreakPointMarkers.Add(line.LineNumber,
+						new LineMarker()
+						{
+							UIElement = ellipse
+						});
+				}
+			}
+		}
+
+		internal bool HandleBreakPoint(sqnet.DebugHookType type, string funcName, int line)
+		{
+			LineMarker breakPoint;
+			if (m_BreakPointMarkers.TryGetValue(line, out breakPoint))
+			{
+				Dispatcher.BeginInvoke((System.Threading.ThreadStart)delegate
+				{
+					if (m_ExecutingLineMarker == null)
+					{
+						var arrow = new Polygon()
+						{
+							Fill = Brushes.Yellow,
+							Stroke = Brushes.DimGray,
+							StrokeThickness = 0.9,
+						};
+						var points = new PointCollection();
+
+						points.Add(new Point(3, 5.5));
+						points.Add(new Point(9, 5.5));
+						points.Add(new Point(9, 2));
+						points.Add(new Point(14, 8));
+						points.Add(new Point(9, 14));
+						points.Add(new Point(9, 10.5));
+						points.Add(new Point(3, 10.5));
+						arrow.Points = points;
+						m_ExecutingLineMarker = new LineMarker() { UIElement = arrow };
+						m_BreakPointViewer.Children.Add(m_ExecutingLineMarker.UIElement);
+						Canvas.SetZIndex(m_ExecutingLineMarker.UIElement, 10000);
+					}
+
+					double lineY = m_TextEdit.TextArea.TextView.GetVisualPosition(new TextViewPosition(line, 1), VisualYPosition.LineTop).Y;
+					m_ExecutingLineMarker.UIElement.Visibility = System.Windows.Visibility.Visible;
+					m_ExecutingLineMarker.UIElement.RenderTransform = new TranslateTransform(0, lineY);
+				},
+				System.Windows.Threading.DispatcherPriority.Send);
+
+				return true;
+			}
+			return false;
+		}
+
+		internal void RemoveExecutingMarker()
+		{
+			if (m_ExecutingLineMarker != null && m_BreakPointViewer.Children.Contains(m_ExecutingLineMarker.UIElement))
+			{
+				m_ExecutingLineMarker.UIElement.Visibility = System.Windows.Visibility.Hidden;
+			}
+		}
+
+		class LineMarker
+		{
+			public UIElement UIElement;
 		}
 	}
 }

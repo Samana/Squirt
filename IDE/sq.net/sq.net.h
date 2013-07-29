@@ -7,6 +7,8 @@
 #include <cstdarg>
 #include <tchar.h>
 #include <vector>
+#include <map>
+#include <gcroot.h>
 
 #include "squirrel.h"
 #include "../squirrel/squirt.h"
@@ -46,52 +48,13 @@ namespace sqnet {
 		}
 	};
 
-	int Print(const SQChar* str)
-	{
-		String^ tmp = gcnew System::String(str);
-		Cons::ForegroundColor = System::Windows::Media::Colors::Green;
-		System::Console::Write(tmp);
-		return tmp->Length;
-	}
+	int Print(const SQChar* str);
 
 #pragma managed(push, off)
 	
-	int StaticPrintFunc(const SQChar* fmt, ...)
-	{
-		static const int MAX_OUTPUT_STRING = 65536;
-		std::vector<SQChar> buf(512);
-		while(buf.size() < MAX_OUTPUT_STRING)
-		{
-			va_list l;
- 			va_start(l, fmt);
-			if(_vsntprintf_s(&buf[0], buf.size(), buf.size() - 1, fmt, l) > 0)
-			{
-				return Print(&buf[0]);
-				break;
-			}
-			va_end(l);
-			buf.resize(buf.size() * 2);
-		}
-		return -1;
-	}
-
-	void PrintFunc(HSQUIRRELVM vm, const SQChar* fmt, ...)
-	{
-		static const int MAX_OUTPUT_STRING = 65536;
-		std::vector<SQChar> buf(512);
-		while(buf.size() < MAX_OUTPUT_STRING)
-		{
-			va_list l;
- 			va_start(l, fmt);
-			if(_vsntprintf_s(&buf[0], buf.size(), buf.size() - 1, fmt, l) > 0)
-			{
-				Print(&buf[0]);
-				break;
-			}
-			va_end(l);
-			buf.resize(buf.size() * 2);
-		}
-	}
+	int StaticPrintFunc(const SQChar* fmt, ...);
+	void PrintFunc(HSQUIRRELVM vm, const SQChar* fmt, ...);
+	void DebugHookFuncNative(HSQUIRRELVM v, SQInteger type, const SQChar * sourcename, SQInteger line, const SQChar * funcname);
 
 #pragma managed(pop)
 
@@ -144,10 +107,32 @@ namespace sqnet {
 		}
 	}
 
+	public enum class ERuntimeType
+	{
+		Jit_llvm,
+		Interpreter,
+	};
+
+	public enum class DebugHookType
+	{
+		Line,
+		Call,
+		Return,
+	};
+
 	public ref class SQVM
 	{
 		static const int DEFAULT_INIT_STACK_SIZE = 1024;
 		HSQUIRRELVM m_VM;
+		bool m_bDebugInfoEnabled;
+		System::Delegate^ m_DebugHookDelegate;
+
+		[System::Runtime::InteropServices::UnmanagedFunctionPointerAttribute(System::Runtime::InteropServices::CallingConvention::Cdecl)]
+		delegate void DebugHookFuncNative(HSQUIRRELVM v, SQInteger type, const SQChar * sourcename, SQInteger line, const SQChar * funcname);
+
+	public:
+		delegate void DebugHookFunc(DebugHookType type, String^ sourceName, String^ funcName, int line);
+		event DebugHookFunc^ OnDebugCallback;
 
 	public:
 		static SQVM()
@@ -155,40 +140,30 @@ namespace sqnet {
 			sq_setstaticprintffunc(&StaticPrintFunc);
 		}
 
-		SQVM()
-			: m_VM(nullptr)
-		{
-			m_VM = sq_open(DEFAULT_INIT_STACK_SIZE);
-			if(!m_VM)
-				throw gcnew System::InvalidOperationException("sq_open returns nullptr");
-			sq_setprintfunc(m_VM, &PrintFunc, &PrintFunc);
-			sq_setcompilererrorhandler(m_VM, &CompileErrorHandler);
-		}
-		SQVM(int initStackSize)
-			: m_VM(nullptr)
-		{
-			m_VM = sq_open(initStackSize);
-			if(!m_VM)
-				throw gcnew System::InvalidOperationException("sq_open returns nullptr");
-			sq_setprintfunc(m_VM, &PrintFunc, &PrintFunc);
-			sq_setcompilererrorhandler(m_VM, &CompileErrorHandler);
-		}
-		~SQVM()
-		{
-			this->!SQVM();
-		}
+		SQVM();
+		SQVM(int initStackSize);
+		~SQVM();
 
 	protected:
-		!SQVM()
-		{
-			if(m_VM)
-			{
-				sq_close(m_VM);
-				m_VM = nullptr;
-			}
-		}
+		!SQVM();
+
+	internal:
+
+		void OnDebugHook(HSQUIRRELVM v, SQInteger type, const SQChar * sourcename, SQInteger line, const SQChar * funcname);
 
 	public:
+
+		property ERuntimeType RuntimeType
+		{
+			ERuntimeType get() { return sq_getjitenabled(m_VM) ? ERuntimeType::Jit_llvm : ERuntimeType::Interpreter; }
+			void set(ERuntimeType value) { sq_enablejit(m_VM, value == ERuntimeType::Jit_llvm ? SQTrue : SQFalse); }
+		}
+
+		property bool DebugInfoEnabled
+		{
+			bool get() { return m_bDebugInfoEnabled; }
+			void set(bool value) { m_bDebugInfoEnabled = value; sq_enabledebuginfo(m_VM, m_bDebugInfoEnabled ? SQTrue : SQFalse); }
+		}
 
 		bool compilestatic( array<String^>^ arrSrc, String^ projName, bool bRaiseError )
 		{

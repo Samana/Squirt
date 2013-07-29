@@ -59,6 +59,14 @@
             </ToolBar>
             <ToolBar Height="28" FontFamily="Segoe UI Symbol" Background="#FFF0F0F0">
                 <Button x:Name="BtnGo" Content="&#xE102;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.Run"></Button>
+                <ComboBox x:Name="Cmb_DebugType" Width="80" SelectedIndex="0" SelectionChanged="Cmb_DebugType_SelectionChanged">
+                    <ComboBoxItem Content="Debug"/>
+                    <ComboBoxItem Content="Non-Debug"/>
+                </ComboBox>
+                <ComboBox x:Name="Cmb_RuntimeType" Width="80" SelectedIndex="0" SelectionChanged="Cmb_RuntimeType_SelectionChanged">
+                    <ComboBoxItem Content="Jit-llvm"/>
+                    <ComboBoxItem Content="Interpreter"/>
+                </ComboBox>
                 <Separator/>
                 <Button Content="&#xE1CD;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepThrough"></Button>
                 <Button Content="&#xE14A;" ToolTip="{Binding RelativeSource={RelativeSource Self}, Path=Command.Text}" Command="util:Commands.StepIn"></Button>

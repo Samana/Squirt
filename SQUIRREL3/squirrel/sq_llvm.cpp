@@ -15,7 +15,12 @@
 #include "sqfuncproto.h"
 #include "sqclosure.h"
 
+#include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/FormattedStream.h"
+
 using namespace llvm;
+
+static TargetMachine* g_TM;
 
 SqJitEngine::SqJitEngine()
 	: m_llvmContext(llvm::getGlobalContext())
@@ -30,9 +35,12 @@ SqJitEngine::SqJitEngine()
 	llvm::InitializeNativeTarget();
 
 	EngineBuilder builder(&m_llvmModule);
+
 	TargetMachine* tm = builder.selectTarget();
 	tm->Options.PrintMachineCode = 1;
 	m_llvmExecEngine = builder.create();
+
+	g_TM = tm;
 
 #ifdef _SQ64
 	m_VoidPointerTy = Type::getInt64PtrTy(m_llvmContext);	//StructType::create(m_llvmContext, "SQPointer");
@@ -82,6 +90,16 @@ SqJitEngine::SqJitEngine()
 		gloPtr = llvm::Function::Create(funcType, GlobalValue::ExternalLinkage, "SQ_LLVM_RETURN_PROXY", &m_llvmModule);
 		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_RETURN_PROXY);
 		m_InlineFunctions[INL_RETURN] = m_llvmModule.getFunction("SQ_LLVM_RETURN_PROXY");
+	}
+
+	{
+		argTypes.clear();
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		funcType = FunctionType::get(m_llvmBuilder.getVoidTy(), argTypes, false);
+		gloPtr = llvm::Function::Create(funcType, GlobalValue::ExternalLinkage, "SQ_LLVM_OBJECT_NULL_PROXY", &m_llvmModule);
+		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_OBJECT_NULL_PROXY);
+		m_InlineFunctions[INL_OBJECT_NULL] = m_llvmModule.getFunction("SQ_LLVM_OBJECT_NULL_PROXY");
 	}
 
 	{
@@ -164,6 +182,74 @@ SqJitEngine::SqJitEngine()
 		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_ADD);
 		m_InlineFunctions[INL_ADD] = m_llvmModule.getFunction("SQ_LLVM_ADD");
 	}
+
+	{
+		argTypes.clear();
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		funcType = FunctionType::get(m_llvmBuilder.getVoidTy(), argTypes, false);
+		gloPtr = llvm::Function::Create(funcType, GlobalValue::ExternalLinkage, "SQ_LLVM_SUB", &m_llvmModule);
+		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_SUB);
+		m_InlineFunctions[INL_SUB] = m_llvmModule.getFunction("SQ_LLVM_SUB");
+	}
+
+	{
+		argTypes.clear();
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		funcType = FunctionType::get(m_llvmBuilder.getVoidTy(), argTypes, false);
+		gloPtr = llvm::Function::Create(funcType, GlobalValue::ExternalLinkage, "SQ_LLVM_MUL", &m_llvmModule);
+		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_MUL);
+		m_InlineFunctions[INL_MUL] = m_llvmModule.getFunction("SQ_LLVM_MUL");
+	}
+
+	{
+		argTypes.clear();
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		funcType = FunctionType::get(m_llvmBuilder.getVoidTy(), argTypes, false);
+		gloPtr = llvm::Function::Create(funcType, GlobalValue::ExternalLinkage, "SQ_LLVM_DIV", &m_llvmModule);
+		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_DIV);
+		m_InlineFunctions[INL_DIV] = m_llvmModule.getFunction("SQ_LLVM_DIV");
+	}
+
+	{
+		argTypes.clear();
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_VoidPointerTy);
+		funcType = FunctionType::get(m_llvmBuilder.getVoidTy(), argTypes, false);
+		gloPtr = llvm::Function::Create(funcType, GlobalValue::ExternalLinkage, "SQ_LLVM_MOD", &m_llvmModule);
+		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_MOD);
+		m_InlineFunctions[INL_MOD] = m_llvmModule.getFunction("SQ_LLVM_MOD");
+	}
+
+	{
+		argTypes.clear();
+		argTypes.push_back(m_VoidPointerTy);
+		argTypes.push_back(m_SQIntegerTy);
+		funcType = FunctionType::get(m_llvmBuilder.getVoidTy(), argTypes, false);
+		gloPtr = llvm::Function::Create(funcType, GlobalValue::ExternalLinkage, "SQ_LLVM_LINE_HOOK", &m_llvmModule);
+		m_llvmExecEngine->addGlobalMapping(gloPtr, &SQ_LLVM_LINE_HOOK);
+		m_InlineFunctions[INL_LINE_HOOK] = m_llvmModule.getFunction("SQ_LLVM_LINE_HOOK");
+	}
+
+
+	m_llvmFuncPassMgr.add(new DataLayout(*m_llvmExecEngine->getDataLayout()));
+	m_llvmFuncPassMgr.add(createBasicAliasAnalysisPass());
+	m_llvmFuncPassMgr.add(createInstructionCombiningPass());
+	m_llvmFuncPassMgr.add(createInstructionSimplifierPass());
+	m_llvmFuncPassMgr.add(createReassociatePass());
+	m_llvmFuncPassMgr.add(createGVNPass());
+	m_llvmFuncPassMgr.add(createCFGSimplificationPass());
+	m_llvmFuncPassMgr.doInitialization();
 }
 
 Function* SqJitEngine::BuildFunction(
@@ -210,6 +296,24 @@ Function* SqJitEngine::BuildFunction(
 	}
 	else
 	{
+		llvm_sq_ostream ostm;
+		scprintf(_SC("\n=============== BEFORE OPTIMIZATION ==============\n"));
+		f->print(ostm);
+		m_llvmFuncPassMgr.run(*f);
+		scprintf(_SC("\n=============== AFTER OPTIMIZATION ==============\n"));
+		f->print(ostm);
+
+		/*
+		std::string err;
+		llvm_sq_ostream m3log;
+		formatted_raw_ostream fm3log(m3log);
+		//TD = new TargetData(m_llvmModule.getDataLayout());
+		PassManager MPasses;
+		MPasses.add(new llvm::DataLayout(*m_llvmExecEngine->getDataLayout()));
+		g_TM->addPassesToEmitFile(MPasses, fm3log, TargetMachine::CGFT_AssemblyFile);
+		MPasses.run(m_llvmModule);
+		*/
+
 		return f;
 	}
 }
@@ -373,6 +477,16 @@ bool SqJitEngine::SQ_LLVM_RETURN_PROXY(CallingContext* callingctx, SQInteger iar
 	return false;
 }
 
+void SqJitEngine::SQ_LLVM_OBJECT_NULL_PROXY(CallingContext* callingctx, SQObjectPtr* pObj)
+{
+	SQVM* vm = callingctx->VMPtr;
+	SQObjectType tOldType = pObj->_type;
+	SQObjectValue unOldVal = pObj->_unVal;
+	pObj->_type = OT_NULL;
+	pObj->_unVal.raw = (SQRawObjectVal)NULL;
+	__Release(tOldType ,unOldVal);
+}
+
 void SqJitEngine::SQ_LLVM_CLASS_OP(CallingContext* callingctx, SQInteger iarg0, SQInteger iarg1, SQInteger iarg2)
 {
 	SQVM* vm = callingctx->VMPtr;
@@ -434,7 +548,15 @@ void SqJitEngine::SQ_LLVM_OBJECTPTR_ASSIGN(SQObjectPtr* src, SQObjectPtr* dst)
 
 void SqJitEngine::SQ_LLVM_INSTRUCTION_EXEC_HOOK(CallingContext* callingctx, SQInteger nip)
 {
-	scprintf(_SC("IP = %d, stkbase = %d\n"), nip, callingctx->VMPtr->_stackbase);
+//	scprintf(_SC("IP = %d, stkbase = %d\n"), nip, callingctx->VMPtr->_stackbase);
+}
+
+void SqJitEngine::SQ_LLVM_LINE_HOOK(CallingContext* callingctx, SQInteger iarg1)
+{
+	if(callingctx->VMPtr->_debughook)
+	{
+		callingctx->VMPtr->CallDebugHook(_SC('l'), iarg1);
+	}
 }
 
 void SqJitEngine::SQ_LLVM_ADD(CallingContext* callingctx, SQObjectPtr* dst, SQObjectPtr* o1, SQObjectPtr* o2)
@@ -454,6 +576,98 @@ void SqJitEngine::SQ_LLVM_ADD(CallingContext* callingctx, SQObjectPtr* dst, SQOb
 			break;
 		default: 
 			if(!callingctx->VMPtr->ARITH_OP('+', *dst, *o1, *o2))
+			{
+			};
+			break;
+	}
+}
+
+void SqJitEngine::SQ_LLVM_SUB(CallingContext* callingctx, SQObjectPtr* dst, SQObjectPtr* o1, SQObjectPtr* o2)
+{
+	SQInteger tmask = sqobjtype(*o1)|sqobjtype(*o2);
+	switch(tmask) {
+		case OT_INTEGER: 
+			{
+				*dst = _integer(*o1) - _integer(*o2);
+			}
+			break;
+		case (OT_FLOAT|OT_INTEGER): 
+		case (OT_FLOAT): 
+			{
+				*dst = tofloat(*o1) - tofloat(*o2); 
+			}
+			break;
+		default: 
+			if(!callingctx->VMPtr->ARITH_OP('-', *dst, *o1, *o2))
+			{
+			};
+			break;
+	}
+}
+
+void SqJitEngine::SQ_LLVM_MUL(CallingContext* callingctx, SQObjectPtr* dst, SQObjectPtr* o1, SQObjectPtr* o2)
+{
+	SQInteger tmask = sqobjtype(*o1)|sqobjtype(*o2);
+	switch(tmask) {
+		case OT_INTEGER: 
+			{
+				*dst = _integer(*o1) * _integer(*o2);
+			}
+			break;
+		case (OT_FLOAT|OT_INTEGER): 
+		case (OT_FLOAT): 
+			{
+				*dst = tofloat(*o1) * tofloat(*o2); 
+			}
+			break;
+		default: 
+			if(!callingctx->VMPtr->ARITH_OP('*', *dst, *o1, *o2))
+			{
+			};
+			break;
+	}
+}
+
+void SqJitEngine::SQ_LLVM_DIV(CallingContext* callingctx, SQObjectPtr* dst, SQObjectPtr* o1, SQObjectPtr* o2)
+{
+	SQInteger tmask = sqobjtype(*o1)|sqobjtype(*o2);
+	switch(tmask) {
+		case OT_INTEGER: 
+			{
+				*dst = _integer(*o1) / _integer(*o2);
+			}
+			break;
+		case (OT_FLOAT|OT_INTEGER): 
+		case (OT_FLOAT): 
+			{
+				*dst = tofloat(*o1) / tofloat(*o2); 
+			}
+			break;
+		default: 
+			if(!callingctx->VMPtr->ARITH_OP('/', *dst, *o1, *o2))
+			{
+			};
+			break;
+	}
+}
+
+void SqJitEngine::SQ_LLVM_MOD(CallingContext* callingctx, SQObjectPtr* dst, SQObjectPtr* o1, SQObjectPtr* o2)
+{
+	SQInteger tmask = sqobjtype(*o1)|sqobjtype(*o2);
+	switch(tmask) {
+		case OT_INTEGER: 
+			{
+				*dst = _integer(*o1) % _integer(*o2);
+			}
+			break;
+		case (OT_FLOAT|OT_INTEGER): 
+		case (OT_FLOAT): 
+			{
+				*dst = SQFloat(fmod(tofloat(*o1), tofloat(*o2))); 
+			}
+			break;
+		default: 
+			if(!callingctx->VMPtr->ARITH_OP('%', *dst, *o1, *o2))
 			{
 			};
 			break;
@@ -546,7 +760,11 @@ void SqJitEngine::EmitInstructions(llvm::Function* f, SQFunctionProto* sqfuncpro
 		case _OP_LINE:
 			{
 				//if (_debughook) CallDebugHook(_SC('l'),arg1); 
-				NOT_IMPL_YET
+				std::vector<Value*> args;
+				args.push_back(val_context);
+				args.push_back(INT_TO_VALUE(arg1));
+				Value* val_func_call = m_InlineFunctions[INL_LINE_HOOK];
+				m_llvmBuilder.CreateCall(val_func_call, args, "");
 				continue;
 			}
 		case _OP_LOAD:
@@ -910,7 +1128,7 @@ void SqJitEngine::EmitInstructions(llvm::Function* f, SQFunctionProto* sqfuncpro
 				Value* val_o1 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg2));
 				Value* val_o2 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg1));
 
-				Value* val_func_sub = m_llvmModule.getFunction("SQ_LLVM_SUB_PROXY");
+				Value* val_func_sub = m_InlineFunctions[INL_SUB]; //m_llvmModule.getFunction("SQ_LLVM_SUB_PROXY");
 				std::vector<Value*> args;
 				args.push_back(val_context);
 				args.push_back(val_target);
@@ -927,7 +1145,7 @@ void SqJitEngine::EmitInstructions(llvm::Function* f, SQFunctionProto* sqfuncpro
 				Value* val_o1 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg2));
 				Value* val_o2 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg1));
 
-				Value* val_func_mul = m_llvmModule.getFunction("SQ_LLVM_MUL_PROXY");
+				Value* val_func_mul = m_InlineFunctions[INL_MUL]; //m_llvmModule.getFunction("SQ_LLVM_MUL_PROXY");
 				std::vector<Value*> args;
 				args.push_back(val_context);
 				args.push_back(val_target);
@@ -944,7 +1162,7 @@ void SqJitEngine::EmitInstructions(llvm::Function* f, SQFunctionProto* sqfuncpro
 				Value* val_o1 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg2));
 				Value* val_o2 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg1));
 
-				Value* val_func_div = m_llvmModule.getFunction("SQ_LLVM_DIV_PROXY");
+				Value* val_func_div = m_InlineFunctions[INL_DIV]; //m_llvmModule.getFunction("SQ_LLVM_DIV_PROXY");
 				std::vector<Value*> args;
 				args.push_back(val_context);
 				args.push_back(val_target);
@@ -961,7 +1179,7 @@ void SqJitEngine::EmitInstructions(llvm::Function* f, SQFunctionProto* sqfuncpro
 				Value* val_o1 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg2));
 				Value* val_o2 = OP_STK(val_vmptr, val_stkbase, INT_TO_VALUE(arg1));
 
-				Value* val_func_mod = m_llvmModule.getFunction("SQ_LLVM_MOD_PROXY");
+				Value* val_func_mod = m_InlineFunctions[INL_MOD]; //m_llvmModule.getFunction("SQ_LLVM_MOD_PROXY");
 				std::vector<Value*> args;
 				args.push_back(val_context);
 				args.push_back(val_target);
@@ -1601,13 +1819,13 @@ llvm::Value* SqJitEngine::OP_EMIT_MEMBER_ACCESSING(llvm::Value* srcObject, size_
 	return m_llvmBuilder.CreateLoad(ptarget);
 }
 
-llvm::Value* SqJitEngine::OP_EMIT_MEMBER_PTR_ACCESSING(llvm::Value* srcObject, size_t memberOffsetInBytes)
+llvm::Value* SqJitEngine::OP_EMIT_MEMBER_PTR_ACCESSING(llvm::Value* srcObject, size_t memberOffsetInBytes, llvm::Type* dstType)
 {
 	assert(srcObject->getType()->isPointerTy() && "srcObject must be a pointer to a structure");
 	
 	Value* praw = m_llvmBuilder.CreatePtrToInt(srcObject, Type::getInt32Ty(getGlobalContext()));
 	praw = m_llvmBuilder.CreateAdd(praw, INT_TO_VALUE(memberOffsetInBytes));
-	return m_llvmBuilder.CreateCast(Instruction::CastOps::IntToPtr, praw, m_VoidPointerTy);
+	return m_llvmBuilder.CreateCast(Instruction::CastOps::IntToPtr, praw, dstType ? dstType : m_VoidPointerTy);
 }
 
 llvm::Value* SqJitEngine::OP_EMIT_ARRAY_INDEXING(llvm::Value* arrPtr, llvm::Value* index, size_t elementSize)
@@ -1663,7 +1881,7 @@ void SqJitEngine::OP_SQOBJFROMINT(llvm::Value* srcInt, llvm::Value* dst)
 
 void SqJitEngine::OP_SQOBJFROMFLOAT(llvm::Value* srcFloat, llvm::Value* dst)
 {
-	llvm::Value* dstFloatPtr = OP_EMIT_MEMBER_PTR_ACCESSING(dst, offsetof(SQObjectPtr, _unVal));
+	llvm::Value* dstFloatPtr = OP_EMIT_MEMBER_PTR_ACCESSING(dst, offsetof(SQObjectPtr, _unVal), llvm::Type::getFloatPtrTy(m_llvmContext));
 	llvm::Value* dstTypePtr = OP_EMIT_MEMBER_PTR_ACCESSING(dst, offsetof(SQObjectPtr, _type));
 	m_llvmBuilder.CreateStore(srcFloat, dstFloatPtr);
 	m_llvmBuilder.CreateStore(m_llvmBuilder.getInt32(OT_FLOAT), dstTypePtr);

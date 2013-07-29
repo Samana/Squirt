@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -30,8 +31,25 @@ namespace SqWrite
 			private set;
 		}
 
+		object m_sync = new object();
+
 		SQVM m_VM;
-		bool IsBuilding = false;
+		volatile bool m_IsBuilding = false;
+		volatile bool m_IsPaused = false;
+
+		public bool IsBuilding
+		{
+			get { lock (m_sync) { return m_IsBuilding; } }
+			set { lock (m_sync) { m_IsBuilding = value; } }
+		}
+
+		public bool IsPaused
+		{
+			get { lock (m_sync) { return m_IsPaused; } }
+			set { lock (m_sync) { m_IsPaused = value; } }
+		}
+
+		System.Threading.AutoResetEvent m_BreakPointLock = new System.Threading.AutoResetEvent(false);
 
 		public SqDocument ActiveDocument
 		{
@@ -80,6 +98,7 @@ namespace SqWrite
 			{
 				OpenDocument(ofd.FileName);
 			}
+			UpdateLayout();
 		}
 
 		private void ExecCommandSave(RoutedEventArgs e)
@@ -94,15 +113,27 @@ namespace SqWrite
 		{
 			if (ActiveDocument != null)
 			{
-				IsBuilding = true;
-				var fileName = ActiveDocument.DocumentFileName;
-				await Task.Run(delegate
+				if (IsPaused)
 				{
-					var bSucComp = m_VM.compilestatic(new string[] { fileName }, "test", true);
-					m_VM.pushroottable();
-					var bSucCall = m_VM.call(1, false, true);
-				});
-				IsBuilding = false;
+					ActiveDocument.RemoveExecutingMarker();
+					IsPaused = false;
+					m_BreakPointLock.Set();
+				}
+				else
+				{
+					IsBuilding = true;
+					UpdateLayout();
+
+					var fileName = ActiveDocument.DocumentFileName;
+					await Task.Run(delegate
+					{
+						var bSucComp = m_VM.compilestatic(new string[] { fileName }, "test", true);
+						m_VM.pushroottable();
+						var bSucCall = m_VM.call(1, false, true);
+					});
+					IsBuilding = false;
+				}
+				UpdateLayout();
 			}
 		}
 
@@ -112,8 +143,46 @@ namespace SqWrite
 			TextBoxWriter tbw = new TextBoxWriter(OutputViewer.TextBoxOutput);
 			System.Console.SetError(tbw);
 			System.Console.SetOut(tbw);
-			Console.WriteLine("...");
 			m_VM = new SQVM();
+			//FIXME: Change to binding
+			//FIXME: Disable "Jit_llvm" when it's not defined.
+			m_VM.DebugInfoEnabled = Cmb_DebugType.SelectedIndex == 0 ? true : false;
+			m_VM.RuntimeType = Cmb_RuntimeType.SelectedIndex == 0 ? ERuntimeType.Jit_llvm : ERuntimeType.Interpreter;
+			m_VM.OnDebugCallback += m_VM_OnDebugCallback;
+		}
+
+		void m_VM_OnDebugCallback(DebugHookType type, string sourceName, string funcName, int line)
+		{
+			//FIXME: Only checking ActiveDocument since we only compile/run that single file for nows.
+			SqDocument activeDocument = null;
+			Dispatcher.BeginInvoke(
+				(ThreadStart)delegate
+				{
+					activeDocument = ActiveDocument;
+				},
+				System.Windows.Threading.DispatcherPriority.Send).Wait();
+
+			if (activeDocument != null && activeDocument.DocumentFileName == sourceName)
+			{
+				if (activeDocument.HandleBreakPoint(type, funcName, line))
+				{
+					Dispatcher.BeginInvoke(
+						(ThreadStart)delegate
+						{
+							OnScriptThreadPause();
+						},
+						System.Windows.Threading.DispatcherPriority.Send);
+					m_BreakPointLock.WaitOne();
+					//Dispatcher.BeginInvoke();
+				}
+			}
+		}
+
+		void OnScriptThreadPause()
+		{
+			m_BreakPointLock.Reset();
+			IsPaused = true;
+			UpdateLayout();
 		}
 
 		private void Window_Closed(object sender, EventArgs e)
@@ -160,7 +229,7 @@ namespace SqWrite
 			}
 			else if (e.Command == Commands.Run)
 			{
-				e.CanExecute = ActiveDocument != null && !IsBuilding;
+				e.CanExecute = ActiveDocument != null && ( (!IsBuilding) || IsPaused);
 			}
 			else if (e.Command == Commands.StepThrough
 				|| e.Command == Commands.StepIn
@@ -195,6 +264,22 @@ namespace SqWrite
 		{
 			m_StatusCursorLn.Content = string.Format("Ln {0}", line);
 			m_StatusCursorCol.Content = string.Format("Col {0}", col);
+		}
+
+		private void Cmb_DebugType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			if (m_VM != null)
+			{
+				m_VM.DebugInfoEnabled = (sender as ComboBox).SelectedIndex == 0 ? true : false;
+			}
+		}
+
+		private void Cmb_RuntimeType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			if (m_VM != null)
+			{
+				m_VM.RuntimeType = (ERuntimeType)(sender as ComboBox).SelectedIndex;
+			}
 		}
 	}
 }
