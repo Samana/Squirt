@@ -171,9 +171,8 @@ namespace SqWrite
 						{
 							OnScriptThreadPause();
 						},
-						System.Windows.Threading.DispatcherPriority.Send);
+						System.Windows.Threading.DispatcherPriority.Send).Wait();
 					m_BreakPointLock.WaitOne();
-					//Dispatcher.BeginInvoke();
 				}
 			}
 		}
@@ -183,6 +182,7 @@ namespace SqWrite
 			m_BreakPointLock.Reset();
 			IsPaused = true;
 			UpdateLayout();
+			InvalidateVisual();
 		}
 
 		private void Window_Closed(object sender, EventArgs e)

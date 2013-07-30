@@ -754,7 +754,7 @@ exception_restore:
 			}
 			else
 			{
-				return context.ReturnValue ? true : false;
+				return context.ReturnValue ? 1 : 0;
 			}
 		}
 		catch(const sqrt_exception& ex)	//FIXME: Give a specific exception type

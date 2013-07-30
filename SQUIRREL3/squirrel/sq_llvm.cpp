@@ -390,7 +390,7 @@ bool SqJitEngine::SQ_LLVM_OP_CALL_PROXY(CallingContext* callingctx, SQInteger ia
 				vm->_suspended_traps = *callingctx->TrapsPtr; //traps;
 				*callingctx->OutresPtr = clo; //outres = clo;
 				callingctx->Suspend = true;
-				callingctx->ReturnValue = true;
+				callingctx->ReturnValue = 1;
 				return true;
 			}
 			if(isarg0 != -1) {
@@ -1217,12 +1217,11 @@ void SqJitEngine::EmitInstructions(llvm::Function* f, SQFunctionProto* sqfuncpro
 				args.push_back(INT_TO_VALUE(arg0));
 				args.push_back(INT_TO_VALUE(arg1));
 
-				Value* val_if_return = m_llvmBuilder.CreateCall(val_func_return, args);
+				m_llvmBuilder.CreateCall(val_func_return, args);
 								
-				BasicBlock* bb_goon = BasicBlock::Create(m_llvmContext, GetBlockName("goon", nip), f);
-				m_llvmBuilder.CreateCondBr(val_if_return, bb_leave, bb_goon);
-
-				m_llvmBuilder.SetInsertPoint(bb_goon);
+				m_llvmBuilder.CreateBr(bb_leave);
+				BasicBlock* bb_gabbage = BasicBlock::Create(m_llvmContext, GetBlockName("gabbage", nip), f);
+				m_llvmBuilder.SetInsertPoint(bb_gabbage);
 
 				//if((ci)->_generator) {
 				//	(ci)->_generator->Kill();

@@ -4,6 +4,7 @@ using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Editing;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Rendering;
+using sqnet;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -328,10 +329,10 @@ namespace SqWrite
 			}
 		}
 
-		internal bool HandleBreakPoint(sqnet.DebugHookType type, string funcName, int line)
+		internal bool HandleBreakPoint(DebugHookType type, string funcName, int line)
 		{
 			LineMarker breakPoint;
-			if (m_BreakPointMarkers.TryGetValue(line, out breakPoint))
+			if (type == DebugHookType.Line && m_BreakPointMarkers.TryGetValue(line, out breakPoint))
 			{
 				Dispatcher.BeginInvoke((System.Threading.ThreadStart)delegate
 				{

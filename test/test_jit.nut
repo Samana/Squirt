@@ -5,4 +5,5 @@ function foo()
 	return a;
 }
 
-::print(foo());
+local tmp = foo();
+::print(tmp);
